@@ -1,0 +1,224 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "apiVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "The API version"
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "The Id of the subnet in which the node is created"
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "The VM name"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "The VM role size"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The storage account name to store the VHD of the VM"
+      }
+    },
+    "imageReference": {
+      "type": "object",
+      "metadata": {
+        "description": "The image reference"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The user name of the administrator"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the administrator"
+      }
+    },
+    "availabilitySetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The availability set name"
+      }
+    },
+    "dataDiskSizeInGB": {
+      "type": "int",
+      "defaultValue": 0,
+      "allowedValues": [ 0, 200, 500, 1000 ],
+      "metadata": {
+        "description": "The data disk size in GB, 0 means no data disk"
+      }
+    },
+    "customData": {
+      "type": "string",
+      "defaultValue": "[base64('None')]",
+      "metadata": {
+        "description": "The custom data in base64 format"
+      }
+    },
+    "enableAutomaticUpdates": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specify whether the VM is enabled for automatic updates"
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "defaultValue": [ ],
+      "metadata": {
+        "description": "The property 'osProfile/secrets', specify the set of certificates that shall be installed on the VM"
+      }
+    },
+    "dscExtensionName": {
+      "type": "string",
+      "defaultValue": "configNodeWithDsc",
+      "metadata": {
+        "description": "The name of the Dsc extension"
+      }
+    },
+    "dscSettings": {
+      "type": "object",
+      "metadata": {
+        "description": "The DSC public settings"
+      }
+    },
+    "dscProtectedSettings": {
+      "type": "secureObject",
+      "defaultValue": {
+      },
+      "metadata": {
+        "description": "The DSC protected settings"
+      }
+    }
+  },
+  "variables": {
+    "nicName": "[concat(parameters('vmName'), '-nic-', uniqueString(parameters('subnetId')))]",
+    "osDiskUri": "[concat('http://', parameters('storageAccountName'),'.blob.core.windows.net/vhds/', toLower(parameters('vmName')), '-os-', uniqueString(parameters('subnetId')), '.vhd')]",
+    "dataDiskUri": "[concat('http://', parameters('storageAccountName'),'.blob.core.windows.net/vhds/', toLower(parameters('vmName')), '-data-', uniqueString(parameters('subnetId')), '.vhd')]",
+    "needDataDiskJumpBox": {
+      "0": "no",
+      "200": "yes",
+      "500": "yes",
+      "1000": "yes"
+    },
+    "needDataDisk": "[variables('needDataDiskJumpBox')[string(parameters('dataDiskSizeInGB'))]]",
+    "dataDisksJumpBox": {
+      "no": [ ],
+      "yes": [
+        {
+          "name": "datadisk",
+          "vhd": {
+            "uri": "[variables('dataDiskUri')]"
+          },
+          "caching": "None",
+          "createOption": "Empty",
+          "diskSizeGB": "[parameters('dataDiskSizeInGB')]",
+          "lun": 0
+        }
+      ]
+    },
+    "dataDisks": "[variables('dataDisksJumpBox')[variables('needDataDisk')]]"
+  },
+  "resources": [
+    {
+      "apiVersion": "[parameters('apiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "IPConfig",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[parameters('subnetId')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[parameters('apiVersion')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('vmName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+      ],
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[parameters('customData')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": "[parameters('enableAutomaticUpdates')]"
+          },
+          "secrets": "[parameters('secrets')]"
+        },
+        "storageProfile": {
+          "imageReference": "[parameters('imageReference')]",
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[variables('osDiskUri')]"
+            },
+            "caching": "ReadOnly",
+            "createOption": "FromImage"
+          },
+          "dataDisks": "[variables('dataDisks')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "apiVersion": "[parameters('apiVersion')]",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('vmName'), '/', parameters('dscExtensionName'))]",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.20",
+            "autoUpgradeMinorVersion": true,
+            "settings": "[parameters('dscSettings')]",
+            "protectedSettings": "[parameters('dscProtectedSettings')]"
+          }
+        }
+      ]
+    }
+  ]
+}

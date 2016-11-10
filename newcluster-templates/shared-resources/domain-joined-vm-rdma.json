@@ -1,0 +1,216 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "apiVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "The API version"
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "The Id of the subnet in which the node is created"
+      }
+    },
+    "nicName": {
+      "type": "string",
+      "metadata": {
+        "description": "The network interface name"
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "The VM name"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "The VM role size"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The storage account name to store the VHD of the VM"
+      }
+    },
+    "imageReference": {
+      "type": "object",
+      "metadata": {
+        "description": "The image reference"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The user name of the administrator"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the administrator"
+      }
+    },
+    "availabilitySetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The availability set name"
+      }
+    },
+    "dataDiskSizeInGB": {
+      "type": "int",
+      "defaultValue": 0,
+      "allowedValues": [ 0, 200, 500, 1000 ],
+      "metadata": {
+        "description": "The data disk size in GB, 0 means no data disk"
+      }
+    },
+    "customData": {
+      "type": "string",
+      "defaultValue": "[base64('None')]",
+      "metadata": {
+        "description": "The custom data in base64 format"
+      }
+    },
+    "enableAutomaticUpdates": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specify whether the VM is enabled for automatic updates"
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "defaultValue": [ ],
+      "metadata": {
+        "description": "The property 'osProfile/secrets', specify the set of certificates that shall be installed on the VM"
+      }
+    },
+    "domainName": {
+      "type": "string",
+      "metadata": {
+        "description": "The fully qualified domain name (FQDN) for the private domain forest which will be created by this template, for example 'hpc.local'."
+      }
+    }
+  },
+  "variables": {
+    "osDiskUri": "[concat('http://', parameters('storageAccountName'),'.blob.core.windows.net/vhds/', toLower(parameters('vmName')), '-os-', uniqueString(parameters('subnetId')), '.vhd')]",
+    "dataDiskUri": "[concat('http://', parameters('storageAccountName'),'.blob.core.windows.net/vhds/', toLower(parameters('vmName')), '-data-', uniqueString(parameters('subnetId')), '.vhd')]",
+    "needDataDiskJumpBox": {
+      "0": "no",
+      "200": "yes",
+      "500": "yes",
+      "1000": "yes"
+    },
+    "needDataDisk": "[variables('needDataDiskJumpBox')[string(parameters('dataDiskSizeInGB'))]]",
+    "dataDisksJumpBox": {
+      "no": [ ],
+      "yes": [
+        {
+          "name": "datadisk",
+          "vhd": {
+            "uri": "[variables('dataDiskUri')]"
+          },
+          "caching": "None",
+          "createOption": "Empty",
+          "diskSizeGB": "[parameters('dataDiskSizeInGB')]",
+          "lun": 0
+        }
+      ]
+    },
+    "dataDisks": "[variables('dataDisksJumpBox')[variables('needDataDisk')]]"
+  },
+  "resources": [
+    {
+      "apiVersion": "[parameters('apiVersion')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('vmName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[parameters('customData')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": "[parameters('enableAutomaticUpdates')]"
+          },
+          "secrets": "[parameters('secrets')]"
+        },
+        "storageProfile": {
+          "imageReference": "[parameters('imageReference')]",
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[variables('osDiskUri')]"
+            },
+            "caching": "ReadOnly",
+            "createOption": "FromImage"
+          },
+          "dataDisks": "[variables('dataDisks')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('nicName'))]"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('vmName'),'/installRDMADriver')]",
+          "apiVersion": "[parameters('apiVersion')]",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.HpcCompute",
+            "type": "HpcVmDrivers",
+            "typeHandlerVersion": "1.1"
+          }
+        },
+        {
+          "apiVersion": "[parameters('apiVersion')]",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('vmName'), '/joinDomain')]",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]",
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'),'/extensions/installRDMADriver')]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "JsonADDomainExtension",
+            "typeHandlerVersion": "1.3",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "Name": "[parameters('domainName')]",
+              "User": "[concat(parameters('domainName'), '\\', parameters('adminUsername'))]",
+              "NumberOfRetries": "50",
+              "RetryIntervalInMilliseconds": "10000",
+              "Restart": "true",
+              "Options": "3"
+            },
+            "protectedSettings": {
+              "Password": "[parameters('adminPassword')]"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

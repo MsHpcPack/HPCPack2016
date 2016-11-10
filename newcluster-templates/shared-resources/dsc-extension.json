@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "apiVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "The API version"
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "The VM name"
+      }
+    },
+    "dscExtensionName": {
+      "type": "string",
+      "defaultValue": "configNodeWithDsc",
+      "metadata": {
+        "description": "The name of the Dsc extension"
+      }
+    },
+    "dscSettings": {
+      "type": "object",
+      "metadata": {
+        "description": "The DSC public settings"
+      }
+    },
+    "dscProtectedSettings": {
+      "type": "secureObject",
+      "defaultValue": {
+      },
+      "metadata": {
+        "description": "The DSC protected settings"
+      }
+    }
+  },
+  "variables": {
+  },
+  "resources": [
+    {
+      "apiVersion": "[parameters('apiVersion')]",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('vmName'), '/', parameters('dscExtensionName'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publisher": "Microsoft.Powershell",
+        "type": "DSC",
+        "typeHandlerVersion": "2.20",
+        "autoUpgradeMinorVersion": true,
+        "settings": "[parameters('dscSettings')]",
+        "protectedSettings": "[parameters('dscProtectedSettings')]"
+      }
+    }
+  ]
+}
