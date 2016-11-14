@@ -577,6 +577,7 @@
           "configurationArguments": {
             "HeadNodeList": "[parameters('headNodeList')]",
             "SSLThumbprint": "[parameters('certThumbprint')]",
+            "LinuxCommOverHttp": true,
             "ClusterName": "[parameters('clusterName')]",
             "SQLServerInstance": "[parameters('sqlServerVMName')]",
             "CNSize": "[parameters('computeNodeVMSize')]",

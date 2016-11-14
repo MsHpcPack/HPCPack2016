@@ -46,14 +46,11 @@
         "CentOS_6.7",
         "CentOS_7.0",
         "CentOS_7.1",
-        "CentOS_7.2",
         "CentOS_6.5_HPC",
         "CentOS_7.1_HPC",
         "RHEL_6.7",
         "RHEL_6.8",
         "RHEL_7.2",
-        "SLES_12",
-        "SLES_12_Premium",
         "SLES_12_HPC",
         "SLES_12_HPC_Premium",
         "Ubuntu_14.04",
@@ -287,13 +284,13 @@
       "SLES_12_HPC": {
         "publisher": "SUSE",
         "offer": "SLES-HPC",
-        "sku": "12-SP1",
+        "sku": "12",
         "version": "latest"
       },
       "SLES_12_HPC_Premium": {
         "publisher": "SUSE",
         "offer": "SLES-HPC-Priority",
-        "sku": "12-SP1",
+        "sku": "12",
         "version": "latest"
       },
       "Ubuntu_14.04": {
