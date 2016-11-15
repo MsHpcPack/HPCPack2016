@@ -14,7 +14,7 @@
       "type": "string",
       "defaultValue": "Standard_A4",
       "metadata": {
-        "description": "The VM size for the head node, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes"
+        "description": "The VM size for the head node, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes."
       }
     },
     "computeNodeNamePrefix": {
@@ -26,60 +26,60 @@
     },
     "computeNodeNumber": {
       "type": "int",
-      "defaultValue": 3,
+      "defaultValue": 10,
       "metadata": {
-        "description": "The number of the compute nodes"
+        "description": "The number of the compute nodes."
       }
     },
     "computeNodeVMSize": {
       "type": "string",
       "defaultValue": "Standard_A3",
       "metadata": {
-        "description": "The VM size for the compute nodes, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes"
+        "description": "The VM size for the compute nodes, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes."
       }
     },
     "adminUsername": {
       "type": "string",
       "defaultValue": "hpcadmin",
       "metadata": {
-        "description": "Administrator user name for the virtual machines and the Active Directory domain."
+        "description": "Administrator user name for the virtual machines."
       }
     },
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Administrator password for the virtual machines and the Active Directory domain"
+        "description": "Administrator password for the virtual machines."
       }
     },
-    "hpcBuildVersion": {
+    "hpcPackVersion": {
       "type": "string",
       "defaultValue": "latest",
       "metadata": {
-        "description": "The build Version for HPC Pack 2016"
+        "description": "The version for HPC Pack 2016. It is strongly recommended to specify as 'latest'. The deployment will fail if an incorrect version is specified."
       }
     },
     "vaultName": {
       "type": "string",
       "metadata": {
-        "description": "Name of the KeyVault in which the certificate is stored"
+        "description": "Name of the KeyVault in which the certificate is stored."
       }
     },
     "vaultResourceGroup": {
       "type": "string",
       "metadata": {
-        "description": "Resource Group of the KeyVault in which the certificate is stored"
+        "description": "Resource Group of the KeyVault in which the certificate is stored."
       }
     },
     "certificateUrl": {
       "type": "string",
       "metadata": {
-        "description": "Url of the certificate with version in KeyVault e.g. https://testault.vault.azure.net/secrets/testcert/b621es1db241e56a72d037479xab1r7"
+        "description": "Url of the certificate with version in KeyVault e.g. https://testault.vault.azure.net/secrets/testcert/b621es1db241e56a72d037479xab1r7."
       }
     },
     "certThumbprint": {
       "type": "string",
       "metadata": {
-        "description": "Thumbprint of the certificate"
+        "description": "Thumbprint of the certificate."
       }
     }
   },
@@ -241,8 +241,8 @@
           "imageReference": {
             "publisher": "MicrosoftWindowsServerHPCPack",
             "offer": "WindowsServerHPCPack",
-            "sku": "TechnicalPreview",
-            "version": "[parameters('hpcBuildVersion')]"
+            "sku": "2016",
+            "version": "[parameters('hpcPackVersion')]"
           },
           "osDisk": {
             "name": "osdisk",
@@ -365,8 +365,8 @@
             "value": {
               "publisher": "MicrosoftWindowsServerHPCPack",
               "offer": "WindowsServerHPCPack",
-              "sku": "TechnicalPreviewCN",
-              "version": "[parameters('hpcBuildVersion')]"
+              "sku": "2016CN",
+              "version": "[parameters('hpcPackVersion')]"
             }
           },
           "adminUsername": {
