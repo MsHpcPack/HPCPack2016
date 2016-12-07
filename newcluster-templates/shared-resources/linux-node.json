@@ -156,7 +156,7 @@
           ],
           "properties": {
             "publisher": "Microsoft.HpcPack",
-            "type": "LinuxNodeAgent",
+            "type": "LinuxNodeAgent2016",
             "typeHandlerVersion": "2.1",
             "autoUpgradeMinorVersion": true,
             "settings": {

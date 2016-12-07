@@ -12,6 +12,8 @@
     },
     "sqlServerVMName": {
       "type": "string",
+      "minLength": 3,
+      "maxLength": 15,
       "metadata": {
         "description": "The name of the SQL Server VM."
       }
@@ -26,8 +28,10 @@
     "headNodeList": {
       "type": "string",
       "defaultValue": "HPCHN01,HPCHN02,HPCHN03",
+      "minLength": 5,
+      "maxLength": 47,
       "metadata": {
-        "description": "The list of head nodes joined with ','"
+        "description": "The list of three head node names separated by comma. Do not add any surrounding whitespace."
       }
     },
     "headNodeVMSize": {
@@ -40,6 +44,8 @@
     "computeNodeNamePrefix": {
       "type": "string",
       "defaultValue": "IaaSCN",
+      "minLength": 1,
+      "maxLength": 12,
       "metadata": {
         "description": "The name prefix of the compute nodes. It must be no more than 12 characters, begin with a letter, and contain only letters, numbers and hyphens. For example, if 'IaaSCN' is specified, the compute node names will be 'IaaSCN000', 'IaaSCN001', ..."
       }
