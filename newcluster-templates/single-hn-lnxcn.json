@@ -10,6 +10,17 @@
         "description": "The name of the HPC cluster, also used as the head node name. It must contain between 3 and 15 characters with lowercase letters and numbers, and must start with a letter."
       }
     },
+    "headNodeOS": {
+      "type": "string",
+      "defaultValue": "WindowsServer2012R2",
+      "allowedValues": [
+        "WindowsServer2012R2",
+        "WindowsServer2016"
+      ],
+      "metadata": {
+        "description": "The operating system of the head node."
+      }
+    },
     "headNodeVMSize": {
       "type": "string",
       "defaultValue": "Standard_A4",
@@ -43,6 +54,8 @@
     "computeNodeNamePrefix": {
       "type": "string",
       "defaultValue": "IaaSLnxCN",
+      "minLength": 1,
+      "maxLength": 12,
       "metadata": {
         "description": "The name prefix of the compute nodes. It must be no more than 12 characters, begin with a letter, and contain only letters, numbers and hyphens. For example, if 'IaaSCN' is specified, the compute node names will be 'IaaSCN000', 'IaaSCN001', ..."
       }
@@ -162,6 +175,20 @@
         ]
       }
     ],
+    "headNodeImages": {
+      "WindowsServer2012R2": {
+        "publisher": "MicrosoftWindowsServerHPCPack",
+        "offer": "WindowsServerHPCPack",
+        "sku": "2016HN-WS2012R2",
+        "version": "[parameters('hpcPackVersion')]"
+      },
+      "WindowsServer2016": {
+        "publisher": "MicrosoftWindowsServerHPCPack",
+        "offer": "WindowsServerHPCPack",
+        "sku": "2016HN-WS2016",
+        "version": "[parameters('hpcPackVersion')]"
+      }
+    },
     "computeNodeImages": {
       "CentOS_6.5": {
         "publisher": "OpenLogic",
@@ -266,6 +293,7 @@
         "version": "latest"
       }
     },
+    "headNodeImageRef": "[variables('headNodeImages')[parameters('headNodeOS')]]",
     "selectedLinuxImageRef": "[variables('computeNodeImages')[parameters('computeNodeImage')]]",
     "sharedResxBaseUrl": "https://raw.githubusercontent.com/MsHpcPack/HPCPack2016/master/newcluster-templates/shared-resources"
   },
@@ -378,12 +406,7 @@
           "secrets": "[variables('winCertSecrets')]"
         },
         "storageProfile": {
-          "imageReference": {
-            "publisher": "MicrosoftWindowsServerHPCPack",
-            "offer": "WindowsServerHPCPack",
-            "sku": "2016",
-            "version": "[parameters('hpcPackVersion')]"
-          },
+          "imageReference": "[variables('headNodeImageRef')]",
           "osDisk": {
             "name": "osdisk",
             "vhd": {
