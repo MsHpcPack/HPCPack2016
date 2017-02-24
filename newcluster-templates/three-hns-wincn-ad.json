@@ -158,8 +158,9 @@
     "virtualNetworkName": "[concat(parameters('clusterName'),'vnet')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
+    "publicIPSuffix": "[uniqueString(resourceGroup().id)]",
     "publicIPName": "[concat(parameters('clusterName'),'publicip')]",
-    "publicIPDNSNameLabel": "[concat(toLower(parameters('clusterName')), uniqueString(resourceGroup().id))]",
+    "publicIPDNSNameLabel": "[concat(toLower(parameters('clusterName')), variables('publicIPSuffix'))]",
     "publicIPAddressType": "Dynamic",
     "availabilitySetNameHN": "[concat(parameters('clusterName'), '-avset')]",
     "cnAvailabilitySetNamePrefix": "[concat(parameters('computeNodeNamePrefix'), 'avset')]",
@@ -280,6 +281,22 @@
           }
         }
       }
+    },
+    {
+      "name": "[concat(variables('headNodes')[copyIndex()], 'PublicIp')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "[variables('apiVersion')]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "HNPips",
+        "count": "[length(variables('headNodes'))]"
+      },
+      "properties": {
+          "publicIPAllocationMethod": "Dynamic",
+          "dnsSettings": {
+            "domainNameLabel": "[toLower(concat(variables('headNodes')[copyIndex()], variables('publicIPSuffix')))]"
+          }
+        }        
     },
     {
       "apiVersion": "[variables('apiVersion')]",
@@ -468,7 +485,8 @@
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('lbName'))]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('lbName'))]",
+        "[concat('Microsoft.Network/publicIPAddresses/', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
       ],
       "copy": {
         "name": "HNNics",
@@ -492,7 +510,10 @@
                 {
                   "id": "[concat(variables('lbID'),'/inboundNatRules/RDP-', variables('headNodes')[copyIndex()])]"
                 }
-              ]
+              ],
+              "publicIPAddress": {
+                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
+              }  
             }
           }
         ]
