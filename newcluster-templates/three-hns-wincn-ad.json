@@ -151,6 +151,7 @@
     "lbFrontEndIPConfigID": "[concat(variables('lbID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
     "lbPoolID": "[concat(variables('lbID'),'/backendAddressPools/BackendPool1')]",
     "lbProbeID": "[concat(variables('lbID'),'/probes/tcpProbe')]",
+    "namingServiceProbeID": "[concat(variables('lbID'),'/probes/namingService')]",
     "addressPrefix": "10.0.0.0/16",
     "subnet1Name": "Subnet-1",
     "subnet1Prefix": "10.0.0.0/22",
@@ -380,6 +381,25 @@
                 "id": "[variables('lbProbeID')]"
               }
             }
+          },
+          {
+            "name": "NamingServiceRule",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[variables('lbFrontEndIPConfigID')]"
+              },
+              "backendAddressPool": {
+                "id": "[variables('lbPoolID')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 8939,
+              "backendPort": 8939,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('namingServiceProbeID')]"
+              }
+            }
           }
         ],
         "probes": [
@@ -389,6 +409,16 @@
               "protocol": "Tcp",
               "port": 5800,
               "intervalInSeconds": 5,
+              "numberOfProbes": 2
+            }
+          },
+          {
+            "name": "namingService",
+            "properties": {
+              "protocol": "Http",
+              "port": 8939,
+              "requestPath": "api/fabric/nodes",
+              "inteintervalInSecondsrval": 5,
               "numberOfProbes": 2
             }
           }
