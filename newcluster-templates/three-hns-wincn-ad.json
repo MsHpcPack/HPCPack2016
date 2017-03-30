@@ -673,6 +673,9 @@
                 "function": "ConfigSQLServer"
               }
             }
+          },
+          "dscProtectedSettings": {
+            "value": {}
           }
         }
       }

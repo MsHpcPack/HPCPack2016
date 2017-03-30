@@ -445,6 +445,9 @@
                 "PostConfigScript": ""
               }
             }
+          },
+          "dscProtectedSettings": {
+            "value": {}
           }
         }
       }
