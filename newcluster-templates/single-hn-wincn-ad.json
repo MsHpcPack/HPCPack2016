@@ -7,7 +7,7 @@
       "minLength": 3,
       "maxLength": 12,
       "metadata": {
-        "description": "The name of the HPC cluster, also used as the host name prefix of the domain controller. It must contain between 3 and 12 characters with lowercase letters and numbers, and must start with a letter."
+        "description": "The name of the HPC cluster, also used as the head node name and the host name prefix of the domain controller. It must contain between 3 and 12 characters with lowercase letters and numbers, and must start with a letter."
       }
     },
     "privateDomainName": {
@@ -15,30 +15,6 @@
       "defaultValue": "hpc.local",
       "metadata": {
         "description": "The fully qualified domain name (FQDN) for the private domain forest which will be created by this template, for example 'hpc.local'."
-      }
-    },
-    "sqlServerVMName": {
-      "type": "string",
-      "minLength": 3,
-      "maxLength": 15,
-      "metadata": {
-        "description": "The name of the SQL Server VM."
-      }
-    },
-    "sqlServerVMSize": {
-      "type": "string",
-      "defaultValue": "Standard_A4",
-      "metadata": {
-        "description": "The VM size for the SQL Server VM, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes"
-      }
-    },
-    "headNodeList": {
-      "type": "string",
-      "defaultValue": "HPCHN01,HPCHN02,HPCHN03",
-      "minLength": 5,
-      "maxLength": 47,
-      "metadata": {
-        "description": "The list of three head node names separated by comma. Do not add any surrounding whitespace."
       }
     },
     "headNodeOS": {
@@ -49,7 +25,7 @@
         "WindowsServer2016"
       ],
       "metadata": {
-        "description": "The operating system of the head nodes."
+        "description": "The operating system of the head node."
       }
     },
     "headNodeVMSize": {
@@ -143,22 +119,14 @@
     "storageAccountType": "Standard_LRS",
     "storageAccountName": "[concat('hpc', uniqueString(resourceGroup().id, parameters('clusterName')))]",
     "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
-    "lbName": "[concat(parameters('clusterName'),'-lb')]",
-    "lbID": "[resourceId('Microsoft.Network/loadBalancers',variables('lbName'))]",
-    "lbFrontEndIPConfigID": "[concat(variables('lbID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
-    "lbPoolID": "[concat(variables('lbID'),'/backendAddressPools/BackendPool1')]",
-    "lbProbeID": "[concat(variables('lbID'),'/probes/tcpProbe')]",
-    "namingServiceProbeID": "[concat(variables('lbID'),'/probes/namingService')]",
     "addressPrefix": "10.0.0.0/16",
     "subnet1Name": "Subnet-1",
     "subnet1Prefix": "10.0.0.0/22",
-    "headNodes": "[split(parameters('headNodeList'), ',')]",
     "virtualNetworkName": "[concat(parameters('clusterName'),'vnet')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
-    "publicIPSuffix": "[uniqueString(resourceGroup().id)]",
     "publicIPName": "[concat(parameters('clusterName'),'publicip')]",
-    "publicIPDNSNameLabel": "[concat(toLower(parameters('clusterName')), variables('publicIPSuffix'))]",
+    "publicIPDNSNameLabel": "[concat(toLower(parameters('clusterName')), uniqueString(resourceGroup().id))]",
     "publicIPAddressType": "Dynamic",
     "availabilitySetNameHN": "[concat(parameters('clusterName'), '-avset')]",
     "cnAvailabilitySetNamePrefix": "[concat(parameters('computeNodeNamePrefix'), 'avset')]",
@@ -168,6 +136,7 @@
     "uniqueNicSuffix": "[concat('-nic-', variables('uniqueSuffix'))]",
     "dcVMName": "[concat(parameters('clusterName'),'dc')]",
     "nicNameDC": "[concat(variables('dcVMName'), variables('uniqueNicSuffix'))]",
+    "nicNameHN": "[concat(parameters('clusterName'), variables('uniqueNicSuffix'))]",
     "vmSizeSuffix": "[uniqueString(resourceGroup().id)]",
     "suffixA8Size": "[concat('Standard_A8', variables('vmSizeSuffix'))]",
     "suffixA9Size": "[concat('Standard_A9', variables('vmSizeSuffix'))]",
@@ -281,142 +250,26 @@
       }
     },
     {
-      "name": "[concat(variables('headNodes')[copyIndex()], 'PublicIp')]",
-      "type": "Microsoft.Network/publicIPAddresses",
       "apiVersion": "[variables('apiVersion')]",
-      "location": "[resourceGroup().location]",
-      "copy": {
-        "name": "HNPips",
-        "count": "[length(variables('headNodes'))]"
-      },
-      "properties": {
-          "publicIPAllocationMethod": "Dynamic",
-          "dnsSettings": {
-            "domainNameLabel": "[toLower(concat(variables('headNodes')[copyIndex()], variables('publicIPSuffix')))]"
-          }
-        }        
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "name": "[variables('lbName')]",
-      "type": "Microsoft.Network/loadBalancers",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicNameHN')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
         "Microsoft.Resources/deployments/setupClusterPublicIP"
       ],
       "properties": {
-        "frontendIPConfigurations": [
+        "ipConfigurations": [
           {
-            "name": "LoadBalancerFrontEnd",
+            "name": "IPConfig",
             "properties": {
+              "privateIPAllocationMethod": "Dynamic",
               "publicIPAddress": {
                 "id": "[reference('setupClusterPublicIP').outputs.resourceId.value]"
+              },
+              "subnet": {
+                "id": "[variables('subnetRef')]"
               }
-            }
-          }
-        ],
-        "backendAddressPools": [
-          {
-            "name": "BackendPool1"
-          }
-        ],
-        "inboundNatRules": [
-          {
-            "name": "[concat('RDP-', variables('headNodes')[0])]",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[variables('lbFrontEndIPConfigID')]"
-              },
-              "protocol": "Tcp",
-              "frontendPort": 50001,
-              "backendPort": 3389,
-              "enableFloatingIP": false
-            }
-          },
-          {
-            "name": "[concat('RDP-', variables('headNodes')[1])]",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[variables('lbFrontEndIPConfigID')]"
-              },
-              "protocol": "Tcp",
-              "frontendPort": 50002,
-              "backendPort": 3389,
-              "enableFloatingIP": false
-            }
-          },
-          {
-            "name": "[concat('RDP-', variables('headNodes')[2])]",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[variables('lbFrontEndIPConfigID')]"
-              },
-              "protocol": "Tcp",
-              "frontendPort": 50003,
-              "backendPort": 3389,
-              "enableFloatingIP": false
-            }
-          }
-        ],
-        "loadBalancingRules": [
-          {
-            "name": "LBRule",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[variables('lbFrontEndIPConfigID')]"
-              },
-              "backendAddressPool": {
-                "id": "[variables('lbPoolID')]"
-              },
-              "protocol": "Tcp",
-              "frontendPort": 443,
-              "backendPort": 443,
-              "enableFloatingIP": false,
-              "idleTimeoutInMinutes": 5,
-              "probe": {
-                "id": "[variables('lbProbeID')]"
-              }
-            }
-          },
-          {
-            "name": "NamingServiceRule",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[variables('lbFrontEndIPConfigID')]"
-              },
-              "backendAddressPool": {
-                "id": "[variables('lbPoolID')]"
-              },
-              "protocol": "Tcp",
-              "frontendPort": 8939,
-              "backendPort": 8939,
-              "enableFloatingIP": false,
-              "idleTimeoutInMinutes": 5,
-              "probe": {
-                "id": "[variables('namingServiceProbeID')]"
-              }
-            }
-          }
-        ],
-        "probes": [
-          {
-            "name": "tcpProbe",
-            "properties": {
-              "protocol": "Tcp",
-              "port": 5800,
-              "intervalInSeconds": 5,
-              "numberOfProbes": 2
-            }
-          },
-          {
-            "name": "namingService",
-            "properties": {
-              "protocol": "Http",
-              "port": 8939,
-              "requestPath": "api/fabric/nodes",
-              "inteintervalInSecondsrval": 5,
-              "numberOfProbes": 2
             }
           }
         ]
@@ -504,180 +357,43 @@
       }
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[concat(variables('headNodes')[copyIndex()], variables('uniqueNicSuffix'))]",
+      "apiVersion": "2016-04-30-preview",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('clusterName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('lbName'))]",
-        "[concat('Microsoft.Network/publicIPAddresses/', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameHN'))]"
       ],
-      "copy": {
-        "name": "HNNics",
-        "count": "[length(variables('headNodes'))]"
-      },
       "properties": {
-        "ipConfigurations": [
-          {
-            "name": "IPConfig",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[variables('subnetRef')]"
-              },
-              "loadBalancerBackendAddressPools": [
-                {
-                  "id": "[variables('lbPoolID')]"
-                }
-              ],
-              "loadBalancerInboundNatRules": [
-                {
-                  "id": "[concat(variables('lbID'),'/inboundNatRules/RDP-', variables('headNodes')[copyIndex()])]"
-                }
-              ],
-              "publicIPAddress": {
-                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
-              }  
-            }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Compute/availabilitySets",
-      "name": "[variables('availabilitySetNameHN')]",
-      "apiVersion": "2016-04-30-preview",
-      "sku": {
-        "name": "Aligned"
-      },
-      "properties": {
-        "platformUpdateDomainCount": 3,
-        "platformFaultDomainCount": 2
-      },
-      "location": "[resourceGroup().location]"
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "type": "Microsoft.Resources/deployments",
-      "name": "[concat('create', variables('headNodes')[copyIndex()])]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetNameHN'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', variables('headNodes')[copyIndex()], variables('uniqueNicSuffix'))]"
-      ],
-      "copy": {
-        "name": "createHeadNodeCopy",
-        "count": "[length(variables('headNodes'))]"
-      },
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/windowsvm', variables('hnRDMASuffix'), '.json')]",
-          "contentVersion": "1.0.0.0"
+        "hardwareProfile": {
+          "vmSize": "[parameters('headNodeVMSize')]"
         },
-        "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
+        "osProfile": {
+          "computerName": "[parameters('clusterName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": false
           },
-          "subnetId": {
-            "value": "[variables('subnetRef')]"
-          },
-          "nicName": {
-            "value": "[concat(variables('headNodes')[copyIndex()], variables('uniqueNicSuffix'))]"
-          },
-          "vmName": {
-            "value": "[variables('headNodes')[copyIndex()]]"
-          },
-          "vmSize": {
-            "value": "[parameters('headNodeVMSize')]"
-          },
-          "storageAccountType": {
-            "value": "[variables('storageAccountType')]"
-          },
-          "imageReference": {
-            "value": "[variables('headNodeImageRef')]"
-          },
-          "adminUsername": {
-            "value": "[parameters('adminUsername')]"
-          },
-          "adminPassword": {
-            "value": "[parameters('adminPassword')]"
-          },
-          "availabilitySetName": {
-            "value": "[variables('availabilitySetNameHN')]"
-          },
-          "secrets": {
-            "value": "[variables('certSecrets')]"
-          }
-        }
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "type": "Microsoft.Resources/deployments",
-      "name": "[concat('createDBServer', parameters('sqlServerVMName'))]",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetNameHN'))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'), '/windowsvm-dsc.json')]",
-          "contentVersion": "1.0.0.0"
+          "secrets": "[variables('certSecrets')]"
         },
-        "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
-          "subnetId": {
-            "value": "[variables('subnetRef')]"
-          },
-          "vmName": {
-            "value": "[parameters('sqlServerVMName')]"
-          },
-          "vmSize": {
-            "value": "[parameters('sqlServerVMSize')]"
-          },
-          "storageAccountType": {
-            "value": "[variables('storageAccountType')]"
-          },
-          "imageReference": {
-            "value": {
-              "publisher": "MicrosoftSQLServer",
-              "offer": "SQL2016SP1-WS2016",
-              "sku": "Standard",
-              "version": "latest"
+        "storageProfile": {
+          "imageReference": "[variables('headNodeImageRef')]",
+          "osDisk": {
+            "name": "[concat(parameters('clusterName'), '-osdisk')]",
+            "caching": "ReadOnly",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[variables('storageAccountType')]"
             }
-          },
-          "adminUsername": {
-            "value": "[parameters('adminUsername')]"
-          },
-          "adminPassword": {
-            "value": "[parameters('adminPassword')]"
-          },
-          "availabilitySetName": {
-            "value": "[variables('availabilitySetNameHN')]"
-          },
-          "dataDiskSizeInGB": {
-            "value": 200
-          },
-          "dscExtensionName": {
-            "value": "configSQLServer"
-          },
-          "dscSettings": {
-            "value": {
-              "configuration": {
-                "url": "[concat(variables('sharedResxBaseUrl'),'/ConfigSQLServer.ps1.zip')]",
-                "script": "ConfigSQLServer.ps1",
-                "function": "ConfigSQLServer"
-              }
-            }
-          },
-          "dscProtectedSettings": {
-            "value": {}
           }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('clusterName'), variables('uniqueNicSuffix')))]"
+            }
+          ]
         }
       }
     },
@@ -722,15 +438,11 @@
     {
       "apiVersion": "2015-01-01",
       "type": "Microsoft.Resources/deployments",
-      "name": "[concat('joinDomain', variables('headNodes')[copyIndex()])]",
+      "name": "[concat('joinDomain', parameters('clusterName'))]",
       "dependsOn": [
-        "[concat('Microsoft.Resources/deployments/create', variables('headNodes')[copyIndex()])]",
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('clusterName'))]",
         "Microsoft.Resources/deployments/updateVNetDNS"
       ],
-      "copy": {
-        "name": "HNJoinDomainCopy",
-        "count": "[length(variables('headNodes'))]"
-      },
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -742,7 +454,7 @@
             "value": "[variables('apiVersion')]"
           },
           "vmName": {
-            "value": "[variables('headNodes')[copyIndex()]]"
+            "value": "[parameters('clusterName')]"
           },
           "dscExtensionName": {
             "value": "setupHpcHeadNode"
@@ -773,160 +485,13 @@
         }
       }
     },
-    {
-      "apiVersion": "2015-01-01",
-      "type": "Microsoft.Resources/deployments",
-      "name": "[concat('joinDomain', parameters('sqlServerVMName'))]",
-      "dependsOn": [
-        "[concat('Microsoft.Resources/deployments/createDBServer', parameters('sqlServerVMName'))]",
-        "Microsoft.Resources/deployments/updateVNetDNS"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/dsc-extension.json')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
-          "vmName": {
-            "value": "[parameters('sqlServerVMName')]"
-          },
-          "dscExtensionName": {
-            "value": "configSQLServer"
-          },
-          "dscSettings": {
-            "value": {
-              "configuration": {
-                "url": "[concat(variables('sharedResxBaseUrl'),'/JoinADDomain.ps1.zip')]",
-                "script": "JoinADDomain.ps1",
-                "function": "JoinADDomain"
-              },
-              "configurationArguments": {
-                "DomainName": "[parameters('privateDomainName')]",
-                "DNSServer": "10.0.0.4,8.8.8.8"
-              }
-            }
-          },
-          "dscProtectedSettings": {
-            "value": {
-              "configurationArguments": {
-                "AdminCreds": {
-                  "UserName": "[parameters('adminUsername')]",
-                  "Password": "[parameters('adminPassword')]"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "type": "Microsoft.Resources/deployments",
-      "name": "configDBPermissions",
-      "dependsOn": [
-        "HNJoinDomainCopy",
-        "[concat('Microsoft.Resources/deployments/joinDomain', parameters('sqlServerVMName'))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/dsc-extension.json')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
-          "vmName": {
-            "value": "[parameters('sqlServerVMName')]"
-          },
-          "dscExtensionName": {
-            "value": "configSQLServer"
-          },
-          "dscSettings": {
-            "value": {
-              "configuration": {
-                "url": "[concat(variables('sharedResxBaseUrl'),'/ConfigDBPermissions.ps1.zip')]",
-                "script": "ConfigDBPermissions.ps1",
-                "function": "ConfigDBPermissions"
-              },
-              "configurationArguments": {
-                "DomainName": "[parameters('privateDomainName')]",
-                "HeadNodeList": "[parameters('headNodeList')]"
-              }
-            }
-          },
-          "dscProtectedSettings": {
-            "value": {
-              "configurationArguments": {
-                "AdminCreds": {
-                  "UserName": "[parameters('adminUsername')]",
-                  "Password": "[parameters('adminPassword')]"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "type": "Microsoft.Resources/deployments",
-      "name": "[concat(variables('headNodes')[copyIndex(1)],'-installHpcHNPrereq')]",
-      "dependsOn": [
-        "[concat('Microsoft.Resources/deployments/joinDomain', variables('headNodes')[copyIndex(1)])]"
-      ],
-      "copy": {
-        "name": "HNPreReqInstallCopy",
-        "count": "[sub(length(variables('headNodes')), 1)]"
-      },
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/dsc-extension.json')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
-          "vmName": {
-            "value": "[variables('headNodes')[copyIndex(1)]]"
-          },
-          "dscExtensionName": {
-            "value": "setupHpcHeadNode"
-          },
-          "dscSettings": {
-            "value": {
-              "configuration": {
-                "url": "[concat(variables('sharedResxBaseUrl'),'/InstallHpcNode.ps1.zip')]",
-                "script": "InstallHpcNode.ps1",
-                "function": "InstallHpcNode"
-              },
-              "configurationArguments": {
-                "NodeType": "HeadNodePreReq",
-                "HeadNodeList": "[parameters('headNodeList')]",
-                "SSLThumbprint": "[parameters('certThumbprint')]",
-                "PostConfigScript": ""
-              }
-            }
-          }
-        }
-      }
-    },
-
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('headNodes')[0],'/setupHpcHeadNode')]",
+      "name": "[concat(parameters('clusterName'),'/setupHpcHeadNode')]",
       "apiVersion": "[variables('apiVersion')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "HNPreReqInstallCopy",
-        "Microsoft.Resources/deployments/configDBPermissions",
+        "[concat('Microsoft.Resources/deployments/joinDomain', parameters('clusterName'))]",
         "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
@@ -936,16 +501,13 @@
         "autoUpgradeMinorVersion": true,
         "settings": {
           "configuration": {
-            "url": "[concat(variables('sharedResxBaseUrl'),'/InstallHpcHeadNode.ps1.zip')]",
-            "script": "InstallHpcHeadNode.ps1",
-            "function": "InstallHpcHeadNode"
+            "url": "[concat(variables('sharedResxBaseUrl'),'/InstallHpcSingleHeadNode.ps1.zip')]",
+            "script": "InstallHpcSingleHeadNode.ps1",
+            "function": "InstallHpcSingleHeadNode"
           },
           "configurationArguments": {
-            "HeadNodeList": "[parameters('headNodeList')]",
             "SSLThumbprint": "[parameters('certThumbprint')]",
             "LinuxCommOverHttp": true,
-            "ClusterName": "[parameters('clusterName')]",
-            "SQLServerInstance": "[parameters('sqlServerVMName')]",
             "CNSize": "[parameters('computeNodeVMSize')]",
             "SubscriptionId": "[subscription().subscriptionId]",
             "VNet": "[variables('virtualNetworkName')]",
@@ -1050,7 +612,7 @@
               "configurationArguments": {
                 "DomainName": "[parameters('privateDomainName')]",
                 "NodeType": "ComputeNode",
-                "HeadNodeList": "[parameters('headNodeList')]",
+                "HeadNodeList": "[parameters('clusterName')]",
                 "SSLThumbprint": "[parameters('certThumbprint')]",
                 "PostConfigScript": ""
               }

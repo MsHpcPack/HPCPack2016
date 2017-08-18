@@ -7,7 +7,31 @@
       "minLength": 3,
       "maxLength": 15,
       "metadata": {
-        "description": "The name of the HPC cluster, also used as the head node name. It must contain between 3 and 15 characters with lowercase letters and numbers, and must start with a letter."
+        "description": "The name of the HPC cluster. It must be unique in the domain forest; It must contain between 3 and 15 characters with lowercase letters and numbers, and must start with a letter."
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "The existing virtual network in which all VMs of the HPC cluster will be created."
+      }
+    },
+    "virtualNetworkResourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource group in which the existing virtual network was created."
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The existing subnet in which all VMs of the HPC cluster will be created."
+      }
+    },
+    "domainName": {
+      "type": "string",
+      "metadata": {
+        "description": "The fully qualified domain name (FQDN) for the existing domain forest in which the HPC cluster will join, for example 'hpc.local'."
       }
     },
     "headNodeOS": {
@@ -28,32 +52,9 @@
         "description": "The VM size for the head node, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes."
       }
     },
-    "computeNodeImage": {
-      "type": "string",
-      "defaultValue": "CentOS_7.0",
-      "allowedValues": [
-        "CentOS_6.5",
-        "CentOS_6.6",
-        "CentOS_6.7",
-        "CentOS_7.0",
-        "CentOS_7.1",
-        "CentOS_6.5_HPC",
-        "CentOS_7.1_HPC",
-        "RHEL_6.7",
-        "RHEL_6.8",
-        "RHEL_7.2",
-        "SLES_12_HPC",
-        "SLES_12_HPC_Premium",
-        "Ubuntu_14.04",
-        "Ubuntu_16.04"
-      ],
-      "metadata": {
-        "description": "The Linux VM image of the compute nodes"
-      }
-    },
     "computeNodeNamePrefix": {
       "type": "string",
-      "defaultValue": "IaaSLnxCN",
+      "defaultValue": "IaaSCN",
       "minLength": 1,
       "maxLength": 12,
       "metadata": {
@@ -67,6 +68,17 @@
         "description": "The number of the compute nodes."
       }
     },
+    "computeNodeOS": {
+      "type": "string",
+      "defaultValue": "WindowsServer2012R2",
+      "allowedValues": [
+        "WindowsServer2012R2",
+        "WindowsServer2016"
+      ],
+      "metadata": {
+        "description": "The operating system of the compute nodes."
+      }
+    },
     "computeNodeVMSize": {
       "type": "string",
       "defaultValue": "Standard_A3",
@@ -78,13 +90,13 @@
       "type": "string",
       "defaultValue": "hpcadmin",
       "metadata": {
-        "description": "Administrator user name for the virtual machines."
+        "description": "Administrator user name for the virtual machines and the Active Directory domain."
       }
     },
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Administrator password for the virtual machines."
+        "description": "Administrator password for the virtual machines and the Active Directory domain"
       }
     },
     "hpcPackVersion": {
@@ -124,15 +136,8 @@
     "storageAccountType": "Standard_LRS",
     "storageAccountName": "[concat('hpc', uniqueString(resourceGroup().id, parameters('clusterName')))]",
     "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
-    "addressPrefix": "10.0.0.0/16",
-    "subnet1Name": "Subnet-1",
-    "subnet1Prefix": "10.0.0.0/22",
-    "virtualNetworkName": "[concat(parameters('clusterName'),'vnet')]",
-    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
-    "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
-    "publicIPName": "[concat(parameters('clusterName'),'publicip')]",
-    "publicIPDNSNameLabel": "[concat(toLower(parameters('clusterName')), uniqueString(resourceGroup().id))]",
-    "publicIPAddressType": "Dynamic",
+    "vnetID": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('subnetName'))]",
     "availabilitySetNameHN": "[concat(parameters('clusterName'), '-avset')]",
     "cnAvailabilitySetNamePrefix": "[concat(parameters('computeNodeNamePrefix'), 'avset')]",
     "nbrVMPerAvailabilitySet": 80,
@@ -147,7 +152,7 @@
     "suffixCNSize": "[concat(parameters('computeNodeVMSize'), variables('vmSizeSuffix'))]",
     "cnRDMASuffix": "[replace(replace(replace(variables('suffixCNSize'), variables('suffixA8Size'),'-rdma'), variables('suffixA9Size'),'-rdma'),variables('suffixCNSize'), '')]",
     "hnRDMASuffix": "[replace(replace(replace(variables('suffixHNSize'), variables('suffixA8Size'),'-rdma'), variables('suffixA9Size'),'-rdma'),variables('suffixHNSize'), '')]",
-    "winCertSecrets": [
+    "certSecrets": [
       {
         "sourceVault": {
           "id": "[resourceId(parameters('vaultResourceGroup'), 'Microsoft.KeyVault/vaults', parameters('vaultName'))]"
@@ -156,18 +161,6 @@
           {
             "certificateUrl": "[parameters('certificateUrl')]",
             "certificateStore": "My"
-          }
-        ]
-      }
-    ],
-    "lnxCertSecrets": [
-      {
-        "sourceVault": {
-          "id": "[resourceId(parameters('vaultResourceGroup'), 'Microsoft.KeyVault/vaults', parameters('vaultName'))]"
-        },
-        "vaultCertificates": [
-          {
-            "certificateUrl": "[parameters('certificateUrl')]"
           }
         ]
       }
@@ -187,111 +180,21 @@
       }
     },
     "computeNodeImages": {
-      "CentOS_6.5": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "6.5",
-        "version": "latest"
+      "WindowsServer2012R2": {
+        "publisher": "MicrosoftWindowsServerHPCPack",
+        "offer": "WindowsServerHPCPack",
+        "sku": "2016CN-WS2012R2",
+        "version": "[parameters('hpcPackVersion')]"
       },
-      "CentOS_6.6": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "6.6",
-        "version": "latest"
-      },
-      "CentOS_6.7": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "6.7",
-        "version": "latest"
-      },
-      "CentOS_7.0": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "7.0",
-        "version": "latest"
-      },
-      "CentOS_7.1": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "7.1",
-        "version": "latest"
-      },
-      "CentOS_7.2": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "7.2",
-        "version": "latest"
-      },
-      "CentOS_6.5_HPC": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS-HPC",
-        "sku": "6.5",
-        "version": "latest"
-      },
-      "CentOS_7.1_HPC": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS-HPC",
-        "sku": "7.1",
-        "version": "latest"
-      },
-      "RHEL_6.7": {
-        "publisher": "RedHat",
-        "offer": "RHEL",
-        "sku": "6.7",
-        "version": "latest"
-      },
-      "RHEL_6.8": {
-        "publisher": "RedHat",
-        "offer": "RHEL",
-        "sku": "6.8",
-        "version": "latest"
-      },
-      "RHEL_7.2": {
-        "publisher": "RedHat",
-        "offer": "RHEL",
-        "sku": "7.2",
-        "version": "latest"
-      },
-      "SLES_12": {
-        "publisher": "SUSE",
-        "offer": "SLES",
-        "sku": "12-SP1",
-        "version": "latest"
-      },
-      "SLES_12_Premium": {
-        "publisher": "SUSE",
-        "offer": "SLES-Priority",
-        "sku": "12-SP1",
-        "version": "latest"
-      },
-      "SLES_12_HPC": {
-        "publisher": "SUSE",
-        "offer": "SLES-HPC",
-        "sku": "12",
-        "version": "latest"
-      },
-      "SLES_12_HPC_Premium": {
-        "publisher": "SUSE",
-        "offer": "SLES-HPC-Priority",
-        "sku": "12",
-        "version": "latest"
-      },
-      "Ubuntu_14.04": {
-        "publisher": "Canonical",
-        "offer": "UbuntuServer",
-        "sku": "14.04.3-LTS",
-        "version": "latest"
-      },
-      "Ubuntu_16.04": {
-        "publisher": "Canonical",
-        "offer": "UbuntuServer",
-        "sku": "16.04.0-LTS",
-        "version": "latest"
+      "WindowsServer2016": {
+        "publisher": "MicrosoftWindowsServerHPCPack",
+        "offer": "WindowsServerHPCPack",
+        "sku": "2016CN-WS2016",
+        "version": "[parameters('hpcPackVersion')]"
       }
     },
     "headNodeImageRef": "[variables('headNodeImages')[parameters('headNodeOS')]]",
-    "selectedLinuxImageRef": "[variables('computeNodeImages')[parameters('computeNodeImage')]]",
+    "computeNodeImageRef": "[variables('computeNodeImages')[parameters('computeNodeOS')]]",
     "sharedResxBaseUrl": "https://raw.githubusercontent.com/MsHpcPack/HPCPack2016/master/newcluster-templates/shared-resources"
   },
   "resources": [
@@ -304,74 +207,18 @@
         "accountType": "Standard_LRS"
       }
     },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/virtualNetworks",
-      "name": "[variables('virtualNetworkName')]",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "[variables('addressPrefix')]"
-          ]
-        },
-        "subnets": [
-          {
-            "name": "[variables('subnet1Name')]",
-            "properties": {
-              "addressPrefix": "[variables('subnet1Prefix')]"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "setupClusterPublicIP",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'), '/publicip-new.json')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
-          "publicIPAddressName": {
-            "value": "[variables('publicIPName')]"
-          },
-          "publicIPAddressType": {
-            "value": "[variables('publicIPAddressType')]"
-          },
-          "domainNameLabel": {
-            "value": "[variables('publicIPDNSNameLabel')]"
-          },
-          "publicIPRGName": {
-            "value": "[resourceGroup().name]"
-          }
-        }
-      }
-    },
+
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicNameHN')]",
       "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-        "Microsoft.Resources/deployments/setupClusterPublicIP"
-      ],
       "properties": {
         "ipConfigurations": [
           {
             "name": "IPConfig",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[reference('setupClusterPublicIP').outputs.resourceId.value]"
-              },
               "subnet": {
                 "id": "[variables('subnetRef')]"
               }
@@ -399,7 +246,7 @@
           "windowsConfiguration": {
             "enableAutomaticUpdates": false
           },
-          "secrets": "[variables('winCertSecrets')]"
+          "secrets": "[variables('certSecrets')]"
         },
         "storageProfile": {
           "imageReference": "[variables('headNodeImageRef')]",
@@ -422,12 +269,60 @@
       }
     },
     {
+      "apiVersion": "2015-01-01",
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('joinDomain', parameters('clusterName'))]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('clusterName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('sharedResxBaseUrl'),'/dsc-extension.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "apiVersion": {
+            "value": "[variables('apiVersion')]"
+          },
+          "vmName": {
+            "value": "[parameters('clusterName')]"
+          },
+          "dscExtensionName": {
+            "value": "setupHpcHeadNode"
+          },
+          "dscSettings": {
+            "value": {
+              "configuration": {
+                "url": "[concat(variables('sharedResxBaseUrl'),'/JoinADDomain.ps1.zip')]",
+                "script": "JoinADDomain.ps1",
+                "function": "JoinADDomain"
+              },
+              "configurationArguments": {
+                "DomainName": "[parameters('domainName')]"
+              }
+            }
+          },
+          "dscProtectedSettings": {
+            "value": {
+              "configurationArguments": {
+                "AdminCreds": {
+                  "UserName": "[parameters('adminUsername')]",
+                  "Password": "[parameters('adminPassword')]"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(parameters('clusterName'),'/installSingleHeadNode')]",
+      "name": "[concat(parameters('clusterName'),'/setupHpcHeadNode')]",
       "apiVersion": "[variables('apiVersion')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', parameters('clusterName'))]",
+        "[concat('Microsoft.Resources/deployments/joinDomain', parameters('clusterName'))]",
         "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
@@ -446,8 +341,8 @@
             "LinuxCommOverHttp": true,
             "CNSize": "[parameters('computeNodeVMSize')]",
             "SubscriptionId": "[subscription().subscriptionId]",
-            "VNet": "[variables('virtualNetworkName')]",
-            "Subnet": "[variables('subnet1Name')]",
+            "VNet": "[parameters('virtualNetworkName')]",
+            "Subnet": "[parameters('subnetName')]",
             "Location": "[resourceGroup().location]",
             "ResourceGroup": "[resourceGroup().name]"
           }
@@ -455,7 +350,7 @@
         "protectedSettings": {
           "configurationArguments": {
             "SetupUserCredential": {
-              "UserName": "[parameters('adminUsername')]",
+              "UserName": "[concat(parameters('domainName'), '\\', parameters('adminUsername'))]",
               "Password": "[parameters('adminPassword')]"
             },
             "AzureStorageConnString": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountId'),variables('apiVersion')).key1)]"
@@ -485,7 +380,6 @@
       "type": "Microsoft.Resources/deployments",
       "name": "[concat('create', parameters('computeNodeNamePrefix'), padLeft(string(copyIndex()), 3, '0'))]",
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
         "[concat('Microsoft.Compute/availabilitySets/', variables('cnAvailabilitySetNamePrefix'), padLeft(string(div(copyIndex(), variables('nbrVMPerAvailabilitySet'))), 2, '0'))]"
       ],
       "copy": {
@@ -495,7 +389,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/linux-node.json')]",
+          "uri": "[concat(variables('sharedResxBaseUrl'),'/windowsvm-dsc', variables('cnRDMASuffix'), '.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -515,7 +409,7 @@
             "value": "[variables('storageAccountType')]"
           },
           "imageReference": {
-            "value": "[variables('selectedLinuxImageRef')]"
+            "value": "[variables('computeNodeImageRef')]"
           },
           "adminUsername": {
             "value": "[parameters('adminUsername')]"
@@ -526,20 +420,45 @@
           "availabilitySetName": {
             "value": "[concat(variables('cnAvailabilitySetNamePrefix'), padLeft(string(div(copyIndex(), variables('nbrVMPerAvailabilitySet'))), 2, '0'))]"
           },
-          "secrets": {
-            "value": "[variables('lnxCertSecrets')]"
+          "customData": {
+            "value": "[base64(concat('ImageCategory=public\r\nImageName=', variables('computeNodeImageRef').offer, '-', variables('computeNodeImageRef').sku, '\r\nVMSize=', parameters('computeNodeVMSize')))]"
           },
-          "headNodeList": {
-            "value": "[parameters('clusterName')]"
+          "secrets": {
+            "value": "[variables('certSecrets')]"
+          },
+          "dscExtensionName": {
+            "value": "ConfigHpcNode"
+          },
+          "dscSettings": {
+            "value": {
+              "configuration": {
+                "url": "[concat(variables('sharedResxBaseUrl'),'/ConfigHpcNode.ps1.zip')]",
+                "script": "ConfigHpcNode.ps1",
+                "function": "ConfigHpcNode"
+              },
+              "configurationArguments": {
+                "DomainName": "[parameters('domainName')]",
+                "NodeType": "ComputeNode",
+                "HeadNodeList": "[parameters('clusterName')]",
+                "SSLThumbprint": "[parameters('certThumbprint')]",
+                "PostConfigScript": ""
+              }
+            }
+          },
+          "dscProtectedSettings": {
+            "value": {
+              "configurationArguments": {
+                "AdminCreds": {
+                  "UserName": "[parameters('adminUsername')]",
+                  "Password": "[parameters('adminPassword')]"
+                }
+              }
+            }
           }
         }
       }
     }
   ],
   "outputs": {
-    "clusterDNSName": {
-      "type": "string",
-      "value": "[reference('setupClusterPublicIP').outputs.fqdn.value]"
-    }
   }
 }

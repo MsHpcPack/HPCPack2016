@@ -26,10 +26,11 @@
         "description": "The VM role size"
       }
     },
-    "storageAccountName": {
+    "storageAccountType": {
       "type": "string",
+      "allowedValues": [ "Standard_LRS", "Premium_LRS" ],
       "metadata": {
-        "description": "The storage account name to store the VHD of the VM"
+        "description": "The storage account type for the disks of the VM"
       }
     },
     "imageReference": {
@@ -54,6 +55,15 @@
       "type": "string",
       "metadata": {
         "description": "The availability set name"
+      }
+    },
+    "osDiskSizeInGB": {
+      "type": "int",
+      "defaultValue": 128,
+      "minValue": 30,
+      "maxValue": 1023,
+      "metadata": {
+        "description": "The os disk size in GB"
       }
     },
     "dataDiskSizeInGB": {
@@ -99,7 +109,9 @@
       }
     },
     "dscProtectedSettings": {
-      "type": "object",
+      "type": "secureObject",
+      "defaultValue": {
+      },
       "metadata": {
         "description": "The DSC protected settings"
       }
@@ -107,8 +119,6 @@
   },
   "variables": {
     "nicName": "[concat(parameters('vmName'), '-nic-', uniqueString(parameters('subnetId')))]",
-    "osDiskUri": "[concat('http://', parameters('storageAccountName'),'.blob.core.windows.net/vhds/', toLower(parameters('vmName')), '-os-', uniqueString(parameters('subnetId')), '.vhd')]",
-    "dataDiskUri": "[concat('http://', parameters('storageAccountName'),'.blob.core.windows.net/vhds/', toLower(parameters('vmName')), '-data-', uniqueString(parameters('subnetId')), '.vhd')]",
     "needDataDiskJumpBox": {
       "0": "no",
       "200": "yes",
@@ -120,13 +130,13 @@
       "no": [ ],
       "yes": [
         {
-          "name": "datadisk",
-          "vhd": {
-            "uri": "[variables('dataDiskUri')]"
-          },
+          "name": "[concat(parameters('vmName'), '-datadisk')]",
           "caching": "None",
           "createOption": "Empty",
           "diskSizeGB": "[parameters('dataDiskSizeInGB')]",
+          "managedDisk": {
+            "storageAccountType": "[parameters('storageAccountType')]"
+          },
           "lun": 0
         }
       ]
@@ -154,7 +164,7 @@
       }
     },
     {
-      "apiVersion": "[parameters('apiVersion')]",
+      "apiVersion": "2016-04-30-preview",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[parameters('vmName')]",
       "location": "[resourceGroup().location]",
@@ -181,12 +191,13 @@
         "storageProfile": {
           "imageReference": "[parameters('imageReference')]",
           "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[variables('osDiskUri')]"
-            },
+            "name": "[concat(parameters('vmName'), '-osdisk')]",
             "caching": "ReadOnly",
-            "createOption": "FromImage"
+            "createOption": "FromImage",
+            "diskSizeGB": "[parameters('osDiskSizeInGB')]",
+            "managedDisk": {
+              "storageAccountType": "[parameters('storageAccountType')]"
+            }
           },
           "dataDisks": "[variables('dataDisks')]"
         },
