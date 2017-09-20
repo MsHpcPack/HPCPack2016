@@ -655,6 +655,7 @@
       "name": "[concat('createDBServer', parameters('sqlServerVMName'))]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+		"[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
         "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetNameHN'))]"
       ],
       "properties": {
