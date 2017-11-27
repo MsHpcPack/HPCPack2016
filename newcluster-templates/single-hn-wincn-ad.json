@@ -162,6 +162,7 @@
     "dcVMName": "[concat(parameters('clusterName'),'dc')]",
     "nicNameDC": "[concat(variables('dcVMName'), variables('uniqueNicSuffix'))]",
     "nicNameHN": "[concat(parameters('clusterName'), variables('uniqueNicSuffix'))]",
+    "nsgName": "[concat('hpcnsg-',uniquestring(resourceGroup().id, variables('subnetRef')))]",
     "vmSizeSuffix": "[uniqueString(resourceGroup().id)]",
     "suffixA8Size": "[concat('Standard_A8', variables('vmSizeSuffix'))]",
     "suffixA9Size": "[concat('Standard_A9', variables('vmSizeSuffix'))]",
@@ -275,27 +276,108 @@
       }
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('nicNameHN')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('nsgName')]",
+      "apiVersion": "2016-03-30",
       "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
-        "Microsoft.Resources/deployments/setupClusterPublicIP"
-      ],
       "properties": {
-        "ipConfigurations": [
+        "securityRules": [
           {
-            "name": "IPConfig",
+            "name": "allow-HTTPS",
             "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[reference('setupClusterPublicIP').outputs.resourceId.value]"
-              },
-              "subnet": {
-                "id": "[variables('subnetRef')]"
-              }
+              "description": "Allow Https",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-RDP",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCSession",
+            "properties": {
+              "description": "Allow HPC Session service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9090",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1020,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCBroker",
+            "properties": {
+              "description": "Allow HPC Broker service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9087",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1030,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCBrokerWorker",
+            "properties": {
+              "description": "Allow HPC Broker worker",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9091",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1040,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCDataService",
+            "properties": {
+              "description": "Allow HPC Data service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9094 ",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1050,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCNamingService",
+            "properties": {
+              "description": "Allow HPC Naming Service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "8939",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1060,
+              "direction": "Inbound"
             }
           }
         ]
@@ -322,6 +404,36 @@
             }
           }
         ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicNameHN')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]",
+        "Microsoft.Resources/deployments/setupClusterPublicIP"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "IPConfig",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[reference('setupClusterPublicIP').outputs.resourceId.value]"
+              },
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
       }
     },
     {

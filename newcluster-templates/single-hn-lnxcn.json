@@ -41,20 +41,26 @@
     },
     "computeNodeImage": {
       "type": "string",
-      "defaultValue": "CentOS_7.0",
+      "defaultValue": "CentOS_7.3",
       "allowedValues": [
         "CentOS_6.5",
         "CentOS_6.6",
         "CentOS_6.7",
+        "CentOS_6.8",
         "CentOS_7.0",
         "CentOS_7.1",
+        "CentOS_7.2",
+        "CentOS_7.3",
         "CentOS_6.5_HPC",
+        "CentOS_6.8_HPC",
         "CentOS_7.1_HPC",
+        "CentOS_7.3_HPC",
         "RHEL_6.7",
         "RHEL_6.8",
         "RHEL_7.2",
-        "SLES_12_HPC",
-        "SLES_12_HPC_Premium",
+        "RHEL_7.3",
+        "SLES_12_SP2",
+        "SLES_12_SP2_Premium",
         "Ubuntu_14.04",
         "Ubuntu_16.04"
       ],
@@ -165,6 +171,7 @@
     "uniqueSuffix": "[uniqueString(variables('subnetRef'))]",
     "uniqueNicSuffix": "[concat('-nic-', variables('uniqueSuffix'))]",
     "nicNameHN": "[concat(parameters('clusterName'), variables('uniqueNicSuffix'))]",
+    "nsgName": "[concat('hpcnsg-',uniquestring(resourceGroup().id, variables('subnetRef')))]",
     "vmSizeSuffix": "[uniqueString(resourceGroup().id)]",
     "suffixA8Size": "[concat('Standard_A8', variables('vmSizeSuffix'))]",
     "suffixA9Size": "[concat('Standard_A9', variables('vmSizeSuffix'))]",
@@ -230,6 +237,12 @@
         "sku": "6.7",
         "version": "latest"
       },
+      "CentOS_6.8": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.8",
+        "version": "latest"
+      },
       "CentOS_7.0": {
         "publisher": "OpenLogic",
         "offer": "CentOS",
@@ -248,16 +261,34 @@
         "sku": "7.2",
         "version": "latest"
       },
+      "CentOS_7.3": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.3",
+        "version": "latest"
+      },
       "CentOS_6.5_HPC": {
         "publisher": "OpenLogic",
         "offer": "CentOS-HPC",
         "sku": "6.5",
         "version": "latest"
       },
+      "CentOS_6.8_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "6.8",
+        "version": "latest"
+      },
       "CentOS_7.1_HPC": {
         "publisher": "OpenLogic",
         "offer": "CentOS-HPC",
         "sku": "7.1",
+        "version": "latest"
+      },
+      "CentOS_7.3_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "7.3",
         "version": "latest"
       },
       "RHEL_6.7": {
@@ -278,28 +309,22 @@
         "sku": "7.2",
         "version": "latest"
       },
-      "SLES_12": {
+      "RHEL_7.3": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "7.3",
+        "version": "latest"
+      },
+      "SLES_12_SP2": {
         "publisher": "SUSE",
         "offer": "SLES",
-        "sku": "12-SP1",
+        "sku": "12-SP2",
         "version": "latest"
       },
-      "SLES_12_Premium": {
+      "SLES_12_SP2_Premium": {
         "publisher": "SUSE",
         "offer": "SLES-Priority",
-        "sku": "12-SP1",
-        "version": "latest"
-      },
-      "SLES_12_HPC": {
-        "publisher": "SUSE",
-        "offer": "SLES-HPC",
-        "sku": "12",
-        "version": "latest"
-      },
-      "SLES_12_HPC_Premium": {
-        "publisher": "SUSE",
-        "offer": "SLES-HPC-Priority",
-        "sku": "12",
+        "sku": "12-SP2",
         "version": "latest"
       },
       "Ubuntu_14.04": {
@@ -380,12 +405,121 @@
       }
     },
     {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('nsgName')]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-HTTPS",
+            "properties": {
+              "description": "Allow Https",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-RDP",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCSession",
+            "properties": {
+              "description": "Allow HPC Session service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9090",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1020,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCBroker",
+            "properties": {
+              "description": "Allow HPC Broker service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9087",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1030,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCBrokerWorker",
+            "properties": {
+              "description": "Allow HPC Broker worker",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9091",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1040,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCDataService",
+            "properties": {
+              "description": "Allow HPC Data service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9094 ",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1050,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCNamingService",
+            "properties": {
+              "description": "Allow HPC Naming Service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "8939",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1060,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicNameHN')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]",
         "Microsoft.Resources/deployments/setupClusterPublicIP"
       ],
       "properties": {
@@ -402,7 +536,10 @@
               }
             }
           }
-        ]
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
       }
     },
     {

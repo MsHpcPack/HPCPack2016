@@ -204,6 +204,7 @@
     "uniqueNicSuffix": "[concat('-nic-', variables('uniqueSuffix'))]",
     "dcVMName": "[concat(parameters('clusterName'),'dc')]",
     "nicNameDC": "[concat(variables('dcVMName'), variables('uniqueNicSuffix'))]",
+    "nsgName": "[concat('hpcnsg-',uniquestring(resourceGroup().id, variables('subnetRef')))]",
     "vmSizeSuffix": "[uniqueString(resourceGroup().id)]",
     "suffixA8Size": "[concat('Standard_A8', variables('vmSizeSuffix'))]",
     "suffixA9Size": "[concat('Standard_A9', variables('vmSizeSuffix'))]",
@@ -314,6 +315,114 @@
             "value": "[resourceGroup().name]"
           }
         }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('nsgName')]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-HTTPS",
+            "properties": {
+              "description": "Allow Https",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-RDP",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCSession",
+            "properties": {
+              "description": "Allow HPC Session service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9090",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1020,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCBroker",
+            "properties": {
+              "description": "Allow HPC Broker service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9087",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1030,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCBrokerWorker",
+            "properties": {
+              "description": "Allow HPC Broker worker",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9091",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1040,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCDataService",
+            "properties": {
+              "description": "Allow HPC Data service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "9094 ",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1050,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allow-HPCNamingService",
+            "properties": {
+              "description": "Allow HPC Naming Service",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "8939",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1060,
+              "direction": "Inbound"
+            }
+          }
+        ]
       }
     },
     {
@@ -545,8 +654,8 @@
       "name": "[concat(variables('headNodes')[copyIndex()], variables('uniqueNicSuffix'))]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]",
         "[concat('Microsoft.Network/loadBalancers/', variables('lbName'))]",
         "[concat('Microsoft.Network/publicIPAddresses/', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
       ],
@@ -578,7 +687,10 @@
               }  
             }
           }
-        ]
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
       }
     },
     {
@@ -655,7 +767,7 @@
       "name": "[concat('createDBServer', parameters('sqlServerVMName'))]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-		"[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameDC'))]",
         "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetNameHN'))]"
       ],
       "properties": {
