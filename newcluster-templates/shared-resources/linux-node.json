@@ -166,8 +166,8 @@
           ],
           "properties": {
             "publisher": "Microsoft.HpcPack",
-            "type": "LinuxNodeAgent2016",
-            "typeHandlerVersion": "2.1",
+            "type": "LinuxNodeAgent2016U1",
+            "typeHandlerVersion": "2.3",
             "autoUpgradeMinorVersion": true,
             "settings": {
               "ClusterConnectionString": "[parameters('headNodeList')]"

@@ -55,15 +55,17 @@
         "description": "The number of the compute nodes."
       }
     },
-    "computeNodeOS": {
+    "computeNodeImage": {
       "type": "string",
-      "defaultValue": "WindowsServer2012R2",
+      "defaultValue": "ComputeNodeOnWindowsServer2012R2",
       "allowedValues": [
-        "WindowsServer2012R2",
-        "WindowsServer2016"
+        "ComputeNodeOnWindowsServer2012R2",
+        "ComputeNodeOnWindowsServer2016",
+        "ComputeNodeWithExcelOnWindowsServer2012R2",
+        "ComputeNodeWithExcelOnWindowsServer2016"
       ],
       "metadata": {
-        "description": "The operating system of the compute nodes."
+        "description": "The VM image of the compute nodes."
       }
     },
     "computeNodeDiskType": {
@@ -178,32 +180,44 @@
       "WindowsServer2012R2": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016HN-WS2012R2",
+        "sku": "2016U1HN-WS2012R2",
         "version": "[parameters('hpcPackVersion')]"
       },
       "WindowsServer2016": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016HN-WS2016",
+        "sku": "2016U1HN-WS2016",
         "version": "[parameters('hpcPackVersion')]"
       }
     },
     "computeNodeImages": {
-      "WindowsServer2012R2": {
+      "ComputeNodeOnWindowsServer2012R2": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016CN-WS2012R2",
+        "sku": "2016U1CN-WS2012R2",
         "version": "[parameters('hpcPackVersion')]"
       },
-      "WindowsServer2016": {
+      "ComputeNodeOnWindowsServer2016": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016CN-WS2016",
+        "sku": "2016U1CN-WS2016",
+        "version": "[parameters('hpcPackVersion')]"
+      },
+      "ComputeNodeWithExcelOnWindowsServer2012R2": {
+        "publisher": "MicrosoftWindowsServerHPCPack",
+        "offer": "WindowsServerHPCPack",
+        "sku": "2016U1CN-WS2012R2-Excel",
+        "version": "[parameters('hpcPackVersion')]"
+      },
+      "ComputeNodeWithExcelOnWindowsServer2016": {
+        "publisher": "MicrosoftWindowsServerHPCPack",
+        "offer": "WindowsServerHPCPack",
+        "sku": "2016U1CN-WS2016-Excel",
         "version": "[parameters('hpcPackVersion')]"
       }
     },
     "headNodeImageRef": "[variables('headNodeImages')[parameters('headNodeOS')]]",
-    "computeNodeImageRef": "[variables('computeNodeImages')[parameters('computeNodeOS')]]",
+    "computeNodeImageRef": "[variables('computeNodeImages')[parameters('computeNodeImage')]]",
     "sharedResxBaseUrl": "https://raw.githubusercontent.com/MsHpcPack/HPCPack2016/master/newcluster-templates/shared-resources"
   },
   "resources": [
@@ -356,20 +370,6 @@
               "priority": 1050,
               "direction": "Inbound"
             }
-          },
-          {
-            "name": "allow-HPCNamingService",
-            "properties": {
-              "description": "Allow HPC Naming Service",
-              "protocol": "Tcp",
-              "sourcePortRange": "*",
-              "destinationPortRange": "8939",
-              "sourceAddressPrefix": "*",
-              "destinationAddressPrefix": "*",
-              "access": "Allow",
-              "priority": 1060,
-              "direction": "Inbound"
-            }
           }
         ]
       }
@@ -473,7 +473,10 @@
             "VNet": "[variables('virtualNetworkName')]",
             "Subnet": "[variables('subnet1Name')]",
             "Location": "[resourceGroup().location]",
-            "ResourceGroup": "[resourceGroup().name]"
+            "ResourceGroup": "[resourceGroup().name]",
+            "VaultResourceGroup": "[parameters('VaultResourceGroup')]",
+            "CertificateUrl": "[parameters('CertificateUrl')]",
+            "CNNamePrefix": "[parameters('computeNodeNamePrefix')]"
           }
         },
         "protectedSettings": {

@@ -100,7 +100,7 @@
         "Ubuntu_16.04"
       ],
       "metadata": {
-        "description": "The VM image of the compute nodes"
+        "description": "The Linux VM image of the compute nodes"
       }
     },
     "computeNodeNamePrefix": {
@@ -208,7 +208,6 @@
     "lbFrontEndIPConfigID": "[concat(variables('lbID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
     "lbPoolID": "[concat(variables('lbID'),'/backendAddressPools/BackendPool1')]",
     "lbProbeID": "[concat(variables('lbID'),'/probes/tcpProbe')]",
-    "namingServiceProbeID": "[concat(variables('lbID'),'/probes/namingService')]",
     "addressPrefix": "10.0.0.0/16",
     "subnet1Name": "Subnet-1",
     "subnet1Prefix": "10.0.0.0/22",
@@ -263,13 +262,13 @@
       "WindowsServer2012R2": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016HN-WS2012R2",
+        "sku": "2016U1HN-WS2012R2",
         "version": "[parameters('hpcPackVersion')]"
       },
       "WindowsServer2016": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016HN-WS2016",
+        "sku": "2016U1HN-WS2016",
         "version": "[parameters('hpcPackVersion')]"
       }
     },
@@ -549,20 +548,6 @@
               "priority": 1050,
               "direction": "Inbound"
             }
-          },
-          {
-            "name": "allow-HPCNamingService",
-            "properties": {
-              "description": "Allow HPC Naming Service",
-              "protocol": "Tcp",
-              "sourcePortRange": "*",
-              "destinationPortRange": "8939",
-              "sourceAddressPrefix": "*",
-              "destinationAddressPrefix": "*",
-              "access": "Allow",
-              "priority": 1060,
-              "direction": "Inbound"
-            }
           }
         ]
       }
@@ -665,25 +650,6 @@
                 "id": "[variables('lbProbeID')]"
               }
             }
-          },
-          {
-            "name": "NamingServiceRule",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[variables('lbFrontEndIPConfigID')]"
-              },
-              "backendAddressPool": {
-                "id": "[variables('lbPoolID')]"
-              },
-              "protocol": "Tcp",
-              "frontendPort": 8939,
-              "backendPort": 8939,
-              "enableFloatingIP": false,
-              "idleTimeoutInMinutes": 5,
-              "probe": {
-                "id": "[variables('namingServiceProbeID')]"
-              }
-            }
           }
         ],
         "probes": [
@@ -693,16 +659,6 @@
               "protocol": "Tcp",
               "port": 5800,
               "intervalInSeconds": 5,
-              "numberOfProbes": 2
-            }
-          },
-          {
-            "name": "namingService",
-            "properties": {
-              "protocol": "Http",
-              "port": 8939,
-              "requestPath": "api/fabric/nodes",
-              "inteintervalInSecondsrval": 5,
               "numberOfProbes": 2
             }
           }
@@ -977,7 +933,10 @@
             "VNet": "[variables('virtualNetworkName')]",
             "Subnet": "[variables('subnet1Name')]",
             "Location": "[resourceGroup().location]",
-            "ResourceGroup": "[resourceGroup().name]"
+            "ResourceGroup": "[resourceGroup().name]",
+            "VaultResourceGroup": "[parameters('VaultResourceGroup')]",
+            "CertificateUrl": "[parameters('CertificateUrl')]",
+            "CNNamePrefix": "[parameters('computeNodeNamePrefix')]"
           }
         },
         "protectedSettings": {

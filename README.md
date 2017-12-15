@@ -1,6 +1,7 @@
-# Deploy Microsoft HPC Pack 2016 cluster in Azure
+# Deploy an HPC Pack cluster in Azure with Microsoft HPC Pack 2016 Update 1
 
-### **Note:** see [Pre-Requisites](#prerequisites) section on this page before starting your deployment.
+### **Note:** 
+see [Pre-Requisites](#prerequisites) section on this page before starting your deployment.
 
 You can now deploy a Microsoft HPC Pack 2016 cluster in Azure. Choose one from the following templates and click "Deploy to Azure" button to deploy.
 
