@@ -59,8 +59,9 @@
     },
     "availabilitySetName": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "The availability set name"
+        "description": "The availability set name to join if specified"
       }
     },
     "osDiskSizeInGB": {
@@ -103,6 +104,9 @@
     }
   },
   "variables": {
+    "availabilitySet": {
+      "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+    },
     "needDataDiskJumpBox": {
       "0": "no",
       "200": "yes",
@@ -134,9 +138,7 @@
       "name": "[parameters('vmName')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "availabilitySet": {
-          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
-        },
+        "availabilitySet": "[if(empty(parameters('availabilitySetName')), json('null'), variables('availabilitySet'))]",
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
