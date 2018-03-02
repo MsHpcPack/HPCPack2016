@@ -176,13 +176,19 @@
     "uniqueNicSuffix": "[concat('-nic-', variables('uniqueSuffix'))]",
     "nicNameHN": "[concat(parameters('clusterName'), variables('uniqueNicSuffix'))]",
     "nsgName": "[concat('hpcnsg-',uniquestring(resourceGroup().id, variables('subnetRef')))]",
-    "vmSizeSuffix": "[uniqueString(resourceGroup().id)]",
-    "suffixA8Size": "[concat('Standard_A8', variables('vmSizeSuffix'))]",
-    "suffixA9Size": "[concat('Standard_A9', variables('vmSizeSuffix'))]",
-    "suffixHNSize": "[concat(parameters('headNodeVMSize'), variables('vmSizeSuffix'))]",
-    "suffixCNSize": "[concat(parameters('computeNodeVMSize'), variables('vmSizeSuffix'))]",
-    "cnRDMASuffix": "[replace(replace(replace(variables('suffixCNSize'), variables('suffixA8Size'),'-rdma'), variables('suffixA9Size'),'-rdma'),variables('suffixCNSize'), '')]",
-    "hnRDMASuffix": "[replace(replace(replace(variables('suffixHNSize'), variables('suffixA8Size'),'-rdma'), variables('suffixA9Size'),'-rdma'),variables('suffixHNSize'), '')]",
+    "rdmaVMSizes": [
+      "Standard_A8",
+      "Standard_A9",
+      "Standard_H16r",
+      "Standard_H16mr",
+      "Standard_NC24r",
+      "Standard_NC24rs_v2",
+      "Standard_ND24rs"
+    ],
+    "cnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('computeNodeVMSize'))]",
+    "hnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('headNodeVMSize'))]",
+    "cnRDMASuffix": "[if(variables('cnRDMACapable'), '-rdma', '')]",
+    "hnRDMASuffix": "[if(variables('hnRDMACapable'), '-rdma', '')]",
     "certSecrets": [
       {
         "sourceVault": {

@@ -184,6 +184,7 @@
     "cnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('computeNodeVMSize'))]",
     "hnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('headNodeVMSize'))]",
     "cnRDMASuffix": "[if(variables('cnRDMACapable'), '-rdma', '')]",
+    "hnRDMASuffix": "[if(variables('hnRDMACapable'), '-rdma', '')]",
     "certSecrets": [
       {
         "sourceVault": {
