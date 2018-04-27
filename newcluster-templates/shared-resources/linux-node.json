@@ -53,8 +53,9 @@
     },
     "availabilitySetName": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "The availability set name"
+        "description": "The availability set name to join if specified"
       }
     },
     "osDiskSizeInGB": {
@@ -88,6 +89,9 @@
     }
   },
   "variables":{
+    "availabilitySet": {
+      "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+    },
     "nicName": "[concat(parameters('vmName'), '-nic-', uniqueString(parameters('subnetId')))]"
   },
   "resources": [
@@ -119,9 +123,7 @@
         "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
       ],
       "properties": {
-        "availabilitySet": {
-          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
-        },
+        "availabilitySet": "[if(empty(parameters('availabilitySetName')), json('null'), variables('availabilitySet'))]",
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
