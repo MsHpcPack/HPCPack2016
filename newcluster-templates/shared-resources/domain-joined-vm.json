@@ -2,12 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "apiVersion": {
-      "type": "string",
-      "metadata": {
-        "description": "The API version"
-      }
-    },
     "subnetId": {
       "type": "string",
       "metadata": {
@@ -59,8 +53,9 @@
     },
     "availabilitySetName": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "The availability set name"
+        "description": "The availability set name to join if specified"
       }
     },
     "osDiskSizeInGB": {
@@ -87,6 +82,13 @@
         "description": "The custom data in base64 format"
       }
     },
+    "installRDMADriver": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specify whether to install RDMA driver"
+      }
+    },
     "enableAutomaticUpdates": {
       "type": "bool",
       "defaultValue": false,
@@ -109,6 +111,9 @@
     }
   },
   "variables": {
+    "availabilitySet": {
+      "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+    },
     "needDataDiskJumpBox": {
       "0": "no",
       "200": "yes",
@@ -135,14 +140,12 @@
   },
   "resources": [
     {
-      "apiVersion": "2016-04-30-preview",
+      "apiVersion": "2017-12-01",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[parameters('vmName')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "availabilitySet": {
-          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
-        },
+        "availabilitySet": "[if(empty(parameters('availabilitySetName')), json('null'), variables('availabilitySet'))]",
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
@@ -179,12 +182,29 @@
       },
       "resources": [
         {
-          "apiVersion": "[parameters('apiVersion')]",
+          "condition": "[parameters('installRDMADriver')]",
           "type": "Microsoft.Compute/virtualMachines/extensions",
-          "name": "[concat(parameters('vmName'), '/joinDomain')]",
+          "name": "[concat(parameters('vmName'),'/installRDMADriver')]",
+          "apiVersion": "2017-12-01",
           "location": "[resourceGroup().location]",
           "dependsOn": [
             "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.HpcCompute",
+            "type": "HpcVmDrivers",
+            "typeHandlerVersion": "1.1",
+            "autoUpgradeMinorVersion": true
+          }
+        },
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('vmName'), '/joinDomain')]",
+          "apiVersion": "2017-12-01",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]",
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'),'/extensions/installRDMADriver')]"
           ],
           "properties": {
             "publisher": "Microsoft.Compute",

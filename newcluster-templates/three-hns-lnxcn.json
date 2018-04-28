@@ -86,14 +86,17 @@
         "CentOS_7.1",
         "CentOS_7.2",
         "CentOS_7.3",
+        "CentOS_7.4",
         "CentOS_6.5_HPC",
         "CentOS_6.8_HPC",
         "CentOS_7.1_HPC",
         "CentOS_7.3_HPC",
+        "CentOS_7.4_HPC",
         "RHEL_6.7",
         "RHEL_6.8",
         "RHEL_7.2",
         "RHEL_7.3",
+        "RHEL_7.4",
         "SLES_12_SP3",
         "SLES_12_SP3_HPC",
         "SLES_12_SP3_HPC_Premium",
@@ -207,6 +210,17 @@
       "metadata": {
         "description": "Thumbprint of the certificate."
       }
+    },
+    "enableAcceleratedNetworking": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Specify whether to create the Azure VMs with accelerated networking or not. Note accelerated networking is supported only for some VM sizes and Linux distributions. If you specify it as 'Yes', you must specify accelerated networking supported VM sizes and operating systems for all the VMs in the cluster. More information about accelerated networking please see https://docs.microsoft.com/en-us/azure/virtual-network/create-vm-accelerated-networking-powershell."
+      }
     }
   },
   "variables": {
@@ -214,7 +228,6 @@
       "HDD": "Standard_LRS",
       "SSD": "Premium_LRS"
     },
-    "apiVersion": "2015-06-15",
     "storageAccountName": "[concat('hpc', uniqueString(resourceGroup().id, parameters('clusterName')))]",
     "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
     "lbName": "[concat(parameters('clusterName'),'-lb')]",
@@ -251,8 +264,6 @@
     ],
     "cnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('computeNodeVMSize'))]",
     "hnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('headNodeVMSize'))]",
-    "cnRDMASuffix": "[if(variables('cnRDMACapable'), '-rdma', '')]",
-    "hnRDMASuffix": "[if(variables('hnRDMACapable'), '-rdma', '')]",
     "createCNInAVSet": "[or(equals(parameters('computeNodeInAVSet'), 'Yes'), and(equals(parameters('computeNodeInAVSet'), 'Auto'), variables('cnRDMACapable')))]",
     "winCertSecrets": [
       {
@@ -342,6 +353,12 @@
         "sku": "7.3",
         "version": "latest"
       },
+      "CentOS_7.4": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.4",
+        "version": "latest"
+      },
       "CentOS_6.5_HPC": {
         "publisher": "OpenLogic",
         "offer": "CentOS-HPC",
@@ -366,6 +383,12 @@
         "sku": "7.3",
         "version": "latest"
       },
+      "CentOS_7.4_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "7.4",
+        "version": "latest"
+      },
       "RHEL_6.7": {
         "publisher": "RedHat",
         "offer": "RHEL",
@@ -388,6 +411,12 @@
         "publisher": "RedHat",
         "offer": "RHEL",
         "sku": "7.3",
+        "version": "latest"
+      },
+      "RHEL_7.4": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "7.4",
         "version": "latest"
       },
       "SLES_12_SP3": {
@@ -435,14 +464,16 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "2017-10-01",
       "location": "[resourceGroup().location]",
-      "properties": {
-        "accountType": "Standard_LRS"
-      }
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "properties": {}
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "2017-10-01",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[resourceGroup().location]",
@@ -465,7 +496,7 @@
     {
       "name": "setupClusterPublicIP",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
+      "apiVersion": "2017-05-10",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -473,9 +504,6 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
           "publicIPAddressName": {
             "value": "[variables('publicIPName')]"
           },
@@ -494,7 +522,7 @@
     {
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('nsgName')]",
-      "apiVersion": "2016-03-30",
+      "apiVersion": "2017-10-01",
       "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
@@ -588,7 +616,7 @@
     {
       "name": "[concat(variables('headNodes')[copyIndex()], 'PublicIp')]",
       "type": "Microsoft.Network/publicIPAddresses",
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "2017-10-01",
       "location": "[resourceGroup().location]",
       "copy": {
         "name": "HNPips",
@@ -602,7 +630,7 @@
         }        
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "2017-10-01",
       "name": "[variables('lbName')]",
       "type": "Microsoft.Network/loadBalancers",
       "location": "[resourceGroup().location]",
@@ -699,7 +727,7 @@
       }
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "2017-10-01",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat(variables('headNodes')[copyIndex()], variables('uniqueNicSuffix'))]",
       "location": "[resourceGroup().location]",
@@ -733,20 +761,21 @@
                 }
               ],
               "publicIPAddress": {
-                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
-              }  
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('headNodes')[copyIndex()], 'PublicIp'))]"
+              }
             }
           }
         ],
         "networkSecurityGroup": {
           "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
-        }
+        },
+        "enableAcceleratedNetworking": "[equals(parameters('enableAcceleratedNetworking'), 'Yes')]"
       }
     },
     {
       "type": "Microsoft.Compute/availabilitySets",
       "name": "[variables('availabilitySetNameHN')]",
-      "apiVersion": "2016-04-30-preview",
+      "apiVersion": "2017-12-01",
       "sku": {
         "name": "Aligned"
       },
@@ -757,7 +786,7 @@
       "location": "[resourceGroup().location]"
     },
     {
-      "apiVersion": "2015-01-01",
+      "apiVersion": "2017-05-10",
       "type": "Microsoft.Resources/deployments",
       "name": "[concat('create', variables('headNodes')[copyIndex()])]",
       "dependsOn": [
@@ -771,13 +800,10 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/windowsvm', variables('hnRDMASuffix'), '.json')]",
+          "uri": "[concat(variables('sharedResxBaseUrl'), '/windowsvm.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
           "subnetId": {
             "value": "[variables('subnetRef')]"
           },
@@ -805,6 +831,9 @@
           "availabilitySetName": {
             "value": "[variables('availabilitySetNameHN')]"
           },
+          "installRDMADriver": {
+            "value": "[variables('hnRDMACapable')]"
+          },
           "secrets": {
             "value": "[variables('winCertSecrets')]"
           }
@@ -812,7 +841,7 @@
       }
     },
     {
-      "apiVersion": "2015-01-01",
+      "apiVersion": "2017-05-10",
       "type": "Microsoft.Resources/deployments",
       "name": "[concat('createDBServer', parameters('sqlServerVMName'))]",
       "dependsOn": [
@@ -826,9 +855,6 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
           "subnetId": {
             "value": "[variables('subnetRef')]"
           },
@@ -861,6 +887,9 @@
           "dataDiskSizeInGB": {
             "value": 200
           },
+          "enableAcceleratedNetworking": {
+            "value": "[equals(parameters('enableAcceleratedNetworking'), 'Yes')]"
+          },
           "dscExtensionName": {
             "value": "configSQLServer"
           },
@@ -889,7 +918,7 @@
       }
     },
     {
-      "apiVersion": "2015-01-01",
+      "apiVersion": "2017-05-10",
       "type": "Microsoft.Resources/deployments",
       "name": "[concat(variables('headNodes')[copyIndex(1)],'-installHpcHNPrereq')]",
       "dependsOn": [
@@ -906,9 +935,6 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
           "vmName": {
             "value": "[variables('headNodes')[copyIndex(1)]]"
           },
@@ -936,7 +962,7 @@
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat(variables('headNodes')[0],'/setupHpcHeadNode')]",
-      "apiVersion": "[variables('apiVersion')]",
+      "apiVersion": "2017-12-01",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "HNPreReqInstallCopy",
@@ -978,7 +1004,7 @@
               "UserName": "[parameters('adminUsername')]",
               "Password": "[parameters('adminPassword')]"
             },
-            "AzureStorageConnString": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountId'),variables('apiVersion')).key1)]",
+            "AzureStorageConnString": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountId'), '2017-10-01').keys[0].value)]",
             "SqlLoginCredential": {
               "UserName": "[parameters('sqlLoginName')]",
               "Password": "[parameters('sqlLoginPassword')]"
@@ -991,7 +1017,7 @@
       "condition": "[variables('createCNInAVSet')]",
       "type": "Microsoft.Compute/availabilitySets",
       "name": "[concat(variables('cnAvailabilitySetNamePrefix'), padLeft(string(copyIndex()), 2, '0'))]",
-      "apiVersion": "2016-04-30-preview",
+      "apiVersion": "2017-12-01",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Aligned"
@@ -1006,7 +1032,7 @@
       }
     },
     {
-      "apiVersion": "2015-01-01",
+      "apiVersion": "2017-05-10",
       "type": "Microsoft.Resources/deployments",
       "name": "[concat('create', parameters('computeNodeNamePrefix'), padLeft(string(copyIndex()), 3, '0'))]",
       "dependsOn": [
@@ -1020,13 +1046,10 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('sharedResxBaseUrl'),'/linux-node.json')]",
+          "uri": "[concat(variables('sharedResxBaseUrl'), '/linux-node.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "apiVersion": {
-            "value": "[variables('apiVersion')]"
-          },
           "subnetId": {
             "value": "[variables('subnetRef')]"
           },
@@ -1050,6 +1073,9 @@
           },
           "availabilitySetName": {
             "value": "[if(variables('createCNInAVSet'), concat(variables('cnAvailabilitySetNamePrefix'), padLeft(string(div(copyIndex(), variables('nbrVMPerAvailabilitySet'))), 2, '0')), '')]"
+          },
+          "enableAcceleratedNetworking": {
+            "value": "[equals(parameters('enableAcceleratedNetworking'), 'Yes')]"
           },
           "secrets": {
             "value": "[variables('lnxCertSecrets')]"

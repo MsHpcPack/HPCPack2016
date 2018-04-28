@@ -2,12 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "apiVersion": {
-      "type": "string",
-      "metadata": {
-        "description": "The API version"
-      }
-    },
     "subnetId": {
       "type": "string",
       "metadata": {
@@ -82,11 +76,25 @@
         "description": "The custom data in base64 format"
       }
     },
+    "installRDMADriver": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specify whether to install RDMA driver"
+      }
+    },
     "enableAutomaticUpdates": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
         "description": "Specify whether the VM is enabled for automatic updates"
+      }
+    },
+    "enableAcceleratedNetworking": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Specify whether to create the Azure VM with accelerated networking"
       }
     },
     "secrets": {
@@ -149,7 +157,7 @@
   },
   "resources": [
     {
-      "apiVersion": "[parameters('apiVersion')]",
+      "apiVersion": "2017-10-01",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicName')]",
       "location": "[resourceGroup().location]",
@@ -164,11 +172,12 @@
               }
             }
           }
-        ]
+        ],
+        "enableAcceleratedNetworking": "[parameters('enableAcceleratedNetworking')]"
       }
     },
     {
-      "apiVersion": "2016-04-30-preview",
+      "apiVersion": "2017-12-01",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[parameters('vmName')]",
       "location": "[resourceGroup().location]",
@@ -213,12 +222,29 @@
       },
       "resources": [
         {
-          "apiVersion": "[parameters('apiVersion')]",
+          "condition": "[parameters('installRDMADriver')]",
           "type": "Microsoft.Compute/virtualMachines/extensions",
-          "name": "[concat(parameters('vmName'), '/', parameters('dscExtensionName'))]",
+          "name": "[concat(parameters('vmName'),'/installRDMADriver')]",
+          "apiVersion": "2017-12-01",
           "location": "[resourceGroup().location]",
           "dependsOn": [
             "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.HpcCompute",
+            "type": "HpcVmDrivers",
+            "typeHandlerVersion": "1.1",
+            "autoUpgradeMinorVersion": true
+          }
+        },
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('vmName'), '/', parameters('dscExtensionName'))]",
+          "apiVersion": "2017-12-01",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]",
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'), '/extensions/installRDMADriver')]"
           ],
           "properties": {
             "publisher": "Microsoft.Powershell",
