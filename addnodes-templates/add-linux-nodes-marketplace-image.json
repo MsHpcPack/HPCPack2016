@@ -1,0 +1,418 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "computeNodeNamePrefix": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 12,
+      "metadata": {
+        "description": "The name prefix of the compute nodes. It must be no more than 12 characters, begin with a letter, and contain only letters, numbers and hyphens. For example, computeNodeNamePrefix is specified as 'IaaSCN-', and computeNodeNameStartIndex is specified as 2, the compute node names will be 'IaaSCN-002', 'IaaSCN-003', ...; Make sure the compute node names are unique in the domain forest."
+      }
+    },
+    "computeNodeNameStartIndex": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "The start index of the compute node name series. For example, computeNodeNamePrefix is specified as 'IaaSCN-', and computeNodeNameStartIndex is specified as 2, the compute node names will be 'IaaSCN-002', 'IaaSCN-003', ..."
+      }
+    },
+    "computeNodeNumber": {
+      "type": "int",
+      "defaultValue": 10,
+      "minValue": 1,
+      "maxValue": 50,
+      "metadata": {
+        "description": "The number of the compute nodes. All the compute nodes will be created in the storage account where the custom HPC Pack compute node image locates. It is recommended to create no more than 40 VMs in one storage account to avoid possible throttling."
+      }
+    },
+    "computeNodeImage": {
+      "type": "string",
+      "defaultValue": "CentOS_7.3",
+      "allowedValues": [
+        "CentOS_6.5",
+        "CentOS_6.6",
+        "CentOS_6.7",
+        "CentOS_6.8",
+        "CentOS_7.0",
+        "CentOS_7.1",
+        "CentOS_7.2",
+        "CentOS_7.3",
+        "CentOS_7.4",
+        "CentOS_6.5_HPC",
+        "CentOS_6.8_HPC",
+        "CentOS_7.1_HPC",
+        "CentOS_7.3_HPC",
+        "CentOS_7.4_HPC",
+        "RHEL_6.7",
+        "RHEL_6.8",
+        "RHEL_7.2",
+        "RHEL_7.3",
+        "RHEL_7.4",
+        "SLES_12_SP3",
+        "SLES_12_SP3_HPC",
+        "SLES_12_SP3_HPC_Premium",
+        "SLES_12_SP3_Premium",
+        "Ubuntu_14.04",
+        "Ubuntu_16.04"
+      ],
+      "metadata": {
+        "description": "The Linux VM image of the compute nodes"
+      }
+    },
+    "computeNodeVMSize": {
+      "type": "string",
+      "defaultValue": "Standard_D3_v2",
+      "metadata": {
+        "description": "The VM size of the compute nodes, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes. Note that some VM sizes in the list are only available in some particular locations. Please check the availability and the price of the VM sizes at https://azure.microsoft.com/pricing/details/virtual-machines/windows/ before deployment."
+      }
+    },
+    "computeNodeDiskType": {
+      "type": "string",
+      "defaultValue": "HDD",
+      "allowedValues": [
+        "HDD",
+        "SSD"
+      ],
+      "metadata": {
+        "description": "The disk type of the compute node VMs. Note that SSD only supports DS-series, DSv2-series, GS-series, and Fs-series VMs."
+      }
+    },
+    "domainUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The domain user to be promoted as the cluster administrator, also used as local administrator user name, for example 'johnlee'."
+      }
+    },
+    "domainUserPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The domain user password, also used as the password of the local administrator user."
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "The existing virtual network in which all VMs of the HPC cluster will be created."
+      }
+    },
+    "virtualNetworkResourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource group in which the existing virtual network was created."
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The existing subnet in which all VMs of the HPC cluster will be created."
+      }
+    },
+    "enableAcceleratedNetworking": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Specify whether to create the Azure VMs with accelerated networking or not. Note accelerated networking is supported only for some VM sizes. More information about accelerated networking please see https://docs.microsoft.com/en-us/azure/virtual-network/create-vm-accelerated-networking-powershell."
+      }
+    },
+    "clusterConnectionString": {
+      "type": "string",
+      "metadata": {
+        "description": "The cluster connection string is the list of head nodes separated by comma(','). for example 'myhn', 'myhn1,myhn2,myhn3' if the head node(s) is not domain joined, or 'myhn.hpc.local', 'myhn1.hpc.local,myhn2.hpc.local,myhn3.hpc.local' if the head node(s) is domain joined. "
+      }
+    },
+    "vaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the KeyVault in which the certificate is stored."
+      }
+    },
+    "vaultResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource Group of the KeyVault in which the certificate is stored."
+      }
+    },
+    "certificateUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Url of the certificate with version in KeyVault e.g. https://testault.vault.azure.net/secrets/testcert/b621es1db241e56a72d037479xab1r7."
+      }
+    },
+    "certThumbprint": {
+      "type": "string",
+      "metadata": {
+        "description": "Thumbprint of the certificate."
+      }
+    }
+  },
+  "variables": {
+    "storageAccountTypes": {
+      "HDD": "Standard_LRS",
+      "SSD": "Premium_LRS"
+    },
+    "computeNodeImages": {
+      "CentOS_6.5": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.5",
+        "version": "latest"
+      },
+      "CentOS_6.6": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.6",
+        "version": "latest"
+      },
+      "CentOS_6.7": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.7",
+        "version": "latest"
+      },
+      "CentOS_6.8": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.8",
+        "version": "latest"
+      },
+      "CentOS_7.0": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.0",
+        "version": "latest"
+      },
+      "CentOS_7.1": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.1",
+        "version": "latest"
+      },
+      "CentOS_7.2": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.2",
+        "version": "latest"
+      },
+      "CentOS_7.3": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.3",
+        "version": "latest"
+      },
+      "CentOS_7.4": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "7.4",
+        "version": "latest"
+      },
+      "CentOS_6.5_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "6.5",
+        "version": "latest"
+      },
+      "CentOS_6.8_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "6.8",
+        "version": "latest"
+      },
+      "CentOS_7.1_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "7.1",
+        "version": "latest"
+      },
+      "CentOS_7.3_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "7.3",
+        "version": "latest"
+      },
+      "CentOS_7.4_HPC": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS-HPC",
+        "sku": "7.4",
+        "version": "latest"
+      },
+      "RHEL_6.7": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "6.7",
+        "version": "latest"
+      },
+      "RHEL_6.8": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "6.8",
+        "version": "latest"
+      },
+      "RHEL_7.2": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "7.2",
+        "version": "latest"
+      },
+      "RHEL_7.3": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "7.3",
+        "version": "latest"
+      },
+      "RHEL_7.4": {
+        "publisher": "RedHat",
+        "offer": "RHEL",
+        "sku": "7.4",
+        "version": "latest"
+      },
+      "SLES_12_SP3": {
+        "publisher": "SUSE",
+        "offer": "SLES",
+        "sku": "12-SP3",
+        "version": "latest"
+      },
+      "SLES_12_SP3_HPC": {
+        "publisher": "SUSE",
+        "offer": "SLES-HPC",
+        "sku": "12-SP3",
+        "version": "latest"
+      },
+      "SLES_12_SP3_HPC_Premium": {
+        "publisher": "SUSE",
+        "offer": "SLES-HPC-Priority",
+        "sku": "12-SP3",
+        "version": "latest"
+      },
+      "SLES_12_SP3_Premium": {
+        "publisher": "SUSE",
+        "offer": "SLES-Priority",
+        "sku": "12-SP3",
+        "version": "latest"
+      },
+      "Ubuntu_14.04": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "14.04.3-LTS",
+        "version": "latest"
+      },
+      "Ubuntu_16.04": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "16.04.0-LTS",
+        "version": "latest"
+      }
+    },
+    "computeNodeImageRef": "[variables('computeNodeImages')[parameters('computeNodeImage')]]",
+    "availabilitySetNamePrefix": "[concat(parameters('computeNodeNamePrefix'), 'avset')]",
+    "nbrVMPerAvailabilitySet": 180,
+    "availabilitySetStartIndex": "[div(parameters('computeNodeNameStartIndex'), variables('nbrVMPerAvailabilitySet'))]",
+    "availabilitySetEndIndex": "[div(sub(add(parameters('computeNodeNameStartIndex'), parameters('computeNodeNumber')), 1), variables('nbrVMPerAvailabilitySet'))]",
+    "availabilitySetNumber": "[add(sub(variables('availabilitySetEndIndex'), variables('availabilitySetStartIndex')), 1)]",
+    "vnetID": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('subnetName'))]",
+    "nicNameSuffix": "[concat('-nic', uniqueString(variables('subnetRef')))]",
+    "rdmaVMSizes": [
+      "Standard_A8",
+      "Standard_A9",
+      "Standard_H16r",
+      "Standard_H16mr",
+      "Standard_NC24r",
+      "Standard_NC24rs_v2",
+      "Standard_ND24rs"
+    ],
+    "cnInstallRDMADriver": "[contains(variables('rdmaVMSizes'), parameters('computeNodeVMSize'))]",
+    "sharedResxBaseUrl": "https://raw.githubusercontent.com/MsHpcPack/HPCPack2016/master/newcluster-templates/shared-resources"
+  },
+  "resources": [
+    {
+      "condition": "[variables('cnInstallRDMADriver')]",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[concat(variables('availabilitySetNamePrefix'), padLeft(string(copyIndex()), 2, '0'))]",
+      "apiVersion": "2017-12-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Aligned"
+      },
+      "properties": {
+        "platformUpdateDomainCount": 5,
+        "platformFaultDomainCount": 2
+      },
+      "copy": {
+        "name": "availabilitySetCopy",
+        "count": "[variables('availabilitySetNumber')]"
+      }
+    },
+    {
+      "apiVersion": "2017-05-10",
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('create', parameters('computeNodeNamePrefix'), padLeft(string(copyIndex(parameters('computeNodeNameStartIndex'))), 3, '0'))]",
+      "dependsOn": [
+        "availabilitySetCopy"
+      ],
+      "copy": {
+        "name": "CN",
+        "count": "[parameters('computeNodeNumber')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('sharedResxBaseUrl'), '/linux-node.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[variables('subnetRef')]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('computeNodeNamePrefix'), padLeft(string(copyIndex(parameters('computeNodeNameStartIndex'))), 3, '0'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('computeNodeVMSize')]"
+          },
+          "storageAccountType": {
+            "value": "[variables('storageAccountTypes')[parameters('computeNodeDiskType')]]"
+          },
+          "imageReference": {
+            "value": "[variables('computeNodeImageRef')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('domainUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('domainUserPassword')]"
+          },
+          "availabilitySetName": {
+            "value": "[if(variables('cnInstallRDMADriver'), concat(variables('availabilitySetNamePrefix'), padLeft(string(div(copyIndex(parameters('computeNodeNameStartIndex')), variables('nbrVMPerAvailabilitySet'))), 2, '0')), '')]"
+          },
+          "enableAcceleratedNetworking": {
+            "value": "[if(equals(parameters('enableAcceleratedNetworking'), 'Yes'), bool('true'), bool('false'))]"
+          },
+          "secrets": {
+            "value": [
+              {
+                "sourceVault": {
+                  "id": "[resourceId(parameters('vaultResourceGroup'), 'Microsoft.KeyVault/vaults', parameters('vaultName'))]"
+                },
+                "vaultCertificates": [
+                  {
+                    "certificateUrl": "[parameters('certificateUrl')]"
+                  }
+                ]
+              }
+            ]
+          },
+          "headNodeList": {
+            "value": "[parameters('clusterConnectionString')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+  }
+}
