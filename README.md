@@ -22,7 +22,9 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 </a>
 
 ### Template 3: High-availability cluster with Azure SQL databases for Windows workloads with existing Active Directory Domain
-This template deploys an HPC Pack cluster with high availability for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes **three** head nodes, SQL Azure databases, and a configurable number of **Windows** compute nodes.
+This template deploys an HPC Pack cluster with high availability for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes **three** head nodes, SQL Azure databases, and a configurable number of **Windows** compute nodes. 
+
+***Note***: Make sure you have enabled **service endpoint for Azure SQL Database(Microsoft.Sql)** on the subnet in which you want to create the cluster.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-wincn-existing-ad-sqlazure.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>

@@ -115,7 +115,7 @@
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Administrator password for the virtual machines and the Active Directory domain"
+        "description": "Administrator password for the virtual machines and the Active Directory domain. Password must meet complexity requirements, see https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements"
       }
     },
     "hpcPackVersion": {
