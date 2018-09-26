@@ -144,25 +144,25 @@
       "ComputeNodeOnWindowsServer2012R2": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016U1CN-WS2012R2",
+        "sku": "2016U2CN-WS2012R2",
         "version": "latest"
       },
       "ComputeNodeOnWindowsServer2016": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016U1CN-WS2016",
+        "sku": "2016U2CN-WS2016",
         "version": "latest"
       },
       "ComputeNodeWithExcelOnWindowsServer2012R2": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016U1CN-WS2012R2-Excel",
+        "sku": "2016U2CN-WS2012R2-Excel",
         "version": "latest"
       },
       "ComputeNodeWithExcelOnWindowsServer2016": {
         "publisher": "MicrosoftWindowsServerHPCPack",
         "offer": "WindowsServerHPCPack",
-        "sku": "2016U1CN-WS2016-Excel",
+        "sku": "2016U2CN-WS2016-Excel",
         "version": "latest"
       }
     },

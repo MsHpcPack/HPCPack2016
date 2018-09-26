@@ -1,4 +1,4 @@
-# Deploy an HPC Pack cluster in Azure with Microsoft HPC Pack 2016 Update 1
+# Deploy an HPC Pack cluster in Azure with Microsoft HPC Pack 2016 Update 2
 
 ### **Note:** 
 see [Pre-Requisites](#prerequisites) section on this page before starting your deployment.
@@ -105,12 +105,12 @@ Microsoft HPC Pack 2016 cluster requires a Personal Information Exchange (PFX) c
 
 For operating system **Windows 10 or Windows Server 2016**, just run the built-in ***New-SelfSignedCertificate*** command as following:
 
-	New-SelfSignedCertificate -Subject "CN=HPC Pack 2016 Communication" -KeySpec KeyExchange -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1,1.3.6.1.5.5.7.3.2") -CertStoreLocation cert:\CurrentUser\My -KeyExportPolicy Exportable -NotAfter (Get-Date).AddYears(5) -NotBefore (Get-Date).AddDays(-1)
+	New-SelfSignedCertificate -Subject "CN=HPC Pack 2016 Communication" -KeySpec KeyExchange -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1,1.3.6.1.5.5.7.3.2") -CertStoreLocation cert:\CurrentUser\My -KeyExportPolicy Exportable -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(5) -NotBefore (Get-Date).AddDays(-1)
 
 For operating system **earlier than Windows 10 or Windows Server 2016**, you can download the [Self-signed certificate generator](https://gallery.technet.microsoft.com/scriptcenter/Self-signed-certificate-5920a7c6/) from Microsoft Script Center. Extract Extract its contents and run the following command.
 
 	Import-Module -Name c:\ExtractedModule\New-SelfSignedCertificateEx.ps1
-	New-SelfSignedCertificateEx -Subject "CN=HPC Pack 2016 Communication" -KeySpec Exchange -KeyUsage "DigitalSignature,KeyEncipherment" -EnhancedKeyUsage "Server Authentication","Client Authentication" -StoreLocation CurrentUser -Exportable -NotAfter (Get-Date).AddYears(5) -NotBefore (Get-Date).AddDays(-1)
+	New-SelfSignedCertificateEx -Subject "CN=HPC Pack 2016 Communication" -KeySpec Exchange -KeyUsage "DigitalSignature,KeyEncipherment" -EnhancedKeyUsage "Server Authentication","Client Authentication" -StoreLocation CurrentUser -SignatureAlgorithm SHA256 -Exportable -NotAfter (Get-Date).AddYears(5) -NotBefore (Get-Date).AddDays(-1)
 
 ### 2. Upload the certificate to Azure Key Vault 
 Before deploying the HPC cluster, you shall upload the PFX certificate to an Azure Key Vault as a secret, and remember the following information which will be used in deployment: key vault name, resource group name, secret Id, and certificate thumbprint. More details about uploading certificate to Azure Key Vault please see [description of vaultCertificates.certificateUrl]( https://msdn.microsoft.com/en-us/library/mt163591.aspx#bk_vaultcert), or you can refer to the PowerShell script as below.
