@@ -185,7 +185,7 @@
       "Standard_ND24rs"
     ],
     "cnInstallRDMADriver": "[contains(variables('rdmaVMSizes'), parameters('computeNodeVMSize'))]",
-    "sharedResxBaseUrl": "https://raw.githubusercontent.com/sunbinzhu/HPCPack2016/master/newcluster-templates/shared-resources"
+    "sharedResxBaseUrl": "https://raw.githubusercontent.com/sunbinzhu/HPCPack2016/update1/newcluster-templates/shared-resources"
   },
   "resources": [
     {
