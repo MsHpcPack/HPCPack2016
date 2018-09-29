@@ -895,7 +895,8 @@
           "location": "[resourceGroup().location]",
           "name": "[concat(parameters('virtualNetworkResourceGroupName'), '-', parameters('virtualNetworkName'))]",
           "properties": {
-            "virtualNetworkSubnetId": "[variables('subnetRef')]"
+            "virtualNetworkSubnetId": "[variables('subnetRef')]",
+            "ignoreMissingVnetServiceEndpoint": true
           }
         }
       ]
