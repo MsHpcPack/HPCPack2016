@@ -108,6 +108,13 @@
         "description": "The existing subnet in which all VMs of the HPC cluster will be created."
       }
     },
+    "availabilitySetName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The availability set name if you want to create the compute nodes in an availability set. For RDMA capable VMs, you shall specify this parameter. If you want to create the compute nodes in an existing availabity set, it must be in the same resource group which you selected for this deployment. It is not applicable if you use VMSS."
+      }
+    },
     "enableAcceleratedNetworking": {
       "type": "string",
       "defaultValue": "No",
@@ -308,11 +315,7 @@
       }
     },
     "computeNodeImageRef": "[variables('computeNodeImages')[parameters('computeNodeImage')]]",
-    "availabilitySetNamePrefix": "[concat(parameters('computeNodeNamePrefix'), 'avset')]",
-    "nbrVMPerAvailabilitySet": 180,
-    "availabilitySetStartIndex": "[div(parameters('computeNodeNameStartIndex'), variables('nbrVMPerAvailabilitySet'))]",
-    "availabilitySetEndIndex": "[div(sub(add(parameters('computeNodeNameStartIndex'), parameters('computeNodeNumber')), 1), variables('nbrVMPerAvailabilitySet'))]",
-    "availabilitySetNumber": "[add(sub(variables('availabilitySetEndIndex'), variables('availabilitySetStartIndex')), 1)]",
+    "availabilitySetName": "[if(empty(parameters('availabilitySetName')), 'passsyntaxchecking', parameters('availabilitySetName'))]",
     "vnetID": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('subnetName'))]",
     "nicNameSuffix": "[concat('-nic', uniqueString(variables('subnetRef')))]",
@@ -332,8 +335,8 @@
     {
       "condition": "[variables('cnInstallRDMADriver')]",
       "type": "Microsoft.Compute/availabilitySets",
-      "name": "[concat(variables('availabilitySetNamePrefix'), padLeft(string(copyIndex()), 2, '0'))]",
-      "apiVersion": "2017-12-01",
+      "name": "[variables('availabilitySetName')]",
+      "apiVersion": "2018-06-01",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Aligned"
@@ -341,18 +344,14 @@
       "properties": {
         "platformUpdateDomainCount": 5,
         "platformFaultDomainCount": 2
-      },
-      "copy": {
-        "name": "availabilitySetCopy",
-        "count": "[variables('availabilitySetNumber')]"
       }
     },
     {
-      "apiVersion": "2017-05-10",
+      "apiVersion": "2018-05-01",
       "type": "Microsoft.Resources/deployments",
       "name": "[concat('create', parameters('computeNodeNamePrefix'), padLeft(string(copyIndex(parameters('computeNodeNameStartIndex'))), 3, '0'))]",
       "dependsOn": [
-        "availabilitySetCopy"
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
       ],
       "copy": {
         "name": "CN",
@@ -387,7 +386,7 @@
             "value": "[parameters('domainUserPassword')]"
           },
           "availabilitySetName": {
-            "value": "[if(variables('cnInstallRDMADriver'), concat(variables('availabilitySetNamePrefix'), padLeft(string(div(copyIndex(parameters('computeNodeNameStartIndex')), variables('nbrVMPerAvailabilitySet'))), 2, '0')), '')]"
+            "value": "[parameters('availabilitySetName')]"
           },
           "enableAcceleratedNetworking": {
             "value": "[if(equals(parameters('enableAcceleratedNetworking'), 'Yes'), bool('true'), bool('false'))]"
