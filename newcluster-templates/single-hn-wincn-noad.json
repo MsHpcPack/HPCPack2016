@@ -86,16 +86,17 @@
         "description": "The VM size for the compute nodes, all available VM sizes in Azure can be found at https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes."
       }
     },
-    "computeNodeInAVSet": {
+    "availabilitySetOption": {
       "type": "string",
       "defaultValue": "Auto",
       "allowedValues": [
-        "Yes",
-        "No",
+        "AllNodes",
+        "ComputeNodes",
+        "None",
         "Auto"
       ],
       "metadata": {
-        "description": "Specify whether you want to create the compute nodes in Azure availability set, if 'Auto' is specified, compute nodes are created in availability set only when the VM size is RDMA capable."
+        "description": "Specify whether you want to create the HPC nodes in an Azure availability set. Select 'AllNodes' to create both head node(s) and compute nodes in an availability set; select 'ComputeNodes' to only create compute nodes in an availability set; select 'Auto' to only create RDMA capable nodes in availability set; select 'None' not to create an availability set."
       }
     },
     "adminUsername": {
@@ -170,10 +171,10 @@
     "publicIPName": "[concat(parameters('clusterName'),'publicip')]",
     "publicIPDNSNameLabel": "[concat(toLower(parameters('clusterName')), uniqueString(resourceGroup().id))]",
     "publicIPAddressType": "Dynamic",
-    "availabilitySetNameHN": "[concat(parameters('clusterName'), '-avset')]",
-    "cnAvailabilitySetNamePrefix": "[concat(parameters('computeNodeNamePrefix'), 'avset')]",
-    "nbrVMPerAvailabilitySet": 80,
-    "cnAvailabilitySetNumber": "[add(div(parameters('computeNodeNumber'), variables('nbrVMPerAvailabilitySet')), 1)]",
+    "availabilitySetName": "[concat(parameters('clusterName'), '-avset')]",
+    "availabilitySet": {
+      "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+    },
     "uniqueSuffix": "[uniqueString(variables('subnetRef'))]",
     "uniqueNicSuffix": "[concat('-nic-', variables('uniqueSuffix'))]",
     "nicNameHN": "[concat(parameters('clusterName'), variables('uniqueNicSuffix'))]",
@@ -190,7 +191,8 @@
     ],
     "cnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('computeNodeVMSize'))]",
     "hnRDMACapable": "[contains(variables('rdmaVMSizes'), parameters('headNodeVMSize'))]",
-    "createCNInAVSet": "[or(equals(parameters('computeNodeInAVSet'), 'Yes'), and(equals(parameters('computeNodeInAVSet'), 'Auto'), variables('cnRDMACapable')))]",
+    "createHNInAVSet": "[or(equals(parameters('availabilitySetOption'), 'AllNodes'), and(equals(parameters('availabilitySetOption'), 'Auto'), variables('hnRDMACapable')))]",
+    "createCNInAVSet": "[or(or(equals(parameters('availabilitySetOption'), 'AllNodes'), equals(parameters('availabilitySetOption'), 'ComputeNodes')), and(equals(parameters('availabilitySetOption'), 'Auto'), variables('cnRDMACapable')))]",
     "certSecrets": [
       {
         "sourceVault": {
@@ -433,14 +435,30 @@
       }
     },
     {
+      "condition": "[or(variables('createHNInAVSet'), variables('createCNInAVSet'))]",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('availabilitySetName')]",
+      "apiVersion": "2018-06-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Aligned"
+      },
+      "properties": {
+        "platformUpdateDomainCount": 5,
+        "platformFaultDomainCount": 2
+      }
+    },
+    {
       "apiVersion": "2017-12-01",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[parameters('clusterName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameHN'))]"
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
       ],
       "properties": {
+        "availabilitySet": "[if(variables('createHNInAVSet'), variables('availabilitySet'), json('null'))]",
         "hardwareProfile": {
           "vmSize": "[parameters('headNodeVMSize')]"
         },
@@ -519,30 +537,12 @@
       }
     },
     {
-      "condition": "[variables('createCNInAVSet')]",
-      "type": "Microsoft.Compute/availabilitySets",
-      "name": "[concat(variables('cnAvailabilitySetNamePrefix'), padLeft(string(copyIndex()), 2, '0'))]",
-      "apiVersion": "2017-12-01",
-      "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Aligned"
-      },
-      "properties": {
-        "platformUpdateDomainCount": 5,
-        "platformFaultDomainCount": 2
-      },
-      "copy": {
-        "name": "cnAvailabilitySetCopy",
-        "count": "[variables('cnAvailabilitySetNumber')]"
-      }
-    },
-    {
       "apiVersion": "2017-05-10",
       "type": "Microsoft.Resources/deployments",
       "name": "[concat('create', parameters('computeNodeNamePrefix'), padLeft(string(copyIndex()), 3, '0'))]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-        "cnAvailabilitySetCopy"
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
       ],
       "copy": {
         "name": "CN",
@@ -577,7 +577,7 @@
             "value": "[parameters('adminPassword')]"
           },
           "availabilitySetName": {
-            "value": "[if(variables('createCNInAVSet'), concat(variables('cnAvailabilitySetNamePrefix'), padLeft(string(div(copyIndex(), variables('nbrVMPerAvailabilitySet'))), 2, '0')), '')]"
+            "value": "[if(variables('createCNInAVSet'), variables('availabilitySetName'), '')]"
           },
           "customData": {
             "value": "[base64(concat('ImageCategory=public\r\nImageName=', variables('computeNodeImageRef').offer, '-', variables('computeNodeImageRef').sku, '\r\nVMSize=', parameters('computeNodeVMSize')))]"
