@@ -454,7 +454,7 @@
       "name": "[parameters('clusterName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameHN'))]"
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicNameHN'))]",
         "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
       ],
       "properties": {
