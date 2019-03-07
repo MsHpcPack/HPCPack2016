@@ -1,5 +1,35 @@
-# Deploy an HPC Pack cluster in Azure with Microsoft HPC Pack 2016 Update 2
+# **Important**
 
+**We have moved the project to Microsoft Azure official account in github (@Azure).**
+
+**This repository will not be updated anymore**.
+
+**Please visit our new home at https://www.github.com/Azure/hpcpack-template-2016**
+
+
+
+
+
+
+
+---
+
+## Contributing
+
+This project welcomes contributions and suggestions. Most contributions require you to
+agree to a Contributor License Agreement (CLA) declaring that you have the right to,
+and actually do, grant us the rights to use your contribution. For details, visit
+https://cla.microsoft.com.
+
+When you submit a pull request, a CLA-bot will automatically determine whether you need
+to provide a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the
+instructions provided by the bot. You will only need to do this once across all repositories using our CLA.
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
+or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+---
 ## **Note:**
 
 See [Pre-Requisites](#prerequisites) section on this page before starting your deployment.
@@ -15,7 +45,7 @@ You can now deploy a Microsoft HPC Pack 2016 cluster in Azure. Choose one from t
 This template deploys an HPC Pack cluster with high availability for Windows HPC workloads in Active Directory Domain forest. The cluster includes one domain controller, **three** head nodes, one Database Server with SQL Server 2016 Standard version, and a configurable number of **Windows** compute nodes.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-wincn-ad.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 2: High-availability cluster for Windows workloads with existing Active Directory Domain
@@ -23,7 +53,7 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 This template deploys an HPC Pack cluster with high availability for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes **three** head nodes, one Database Server with SQL Server 2016 Standard version, and a configurable number of **Windows** compute nodes.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-wincn-existing-ad.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 3: High-availability cluster with Azure SQL databases for Windows workloads with existing Active Directory Domain
@@ -33,7 +63,7 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 ***Note***: Make sure you have enabled **service endpoint for Azure SQL Database(Microsoft.Sql)** on the subnet in which you want to create the cluster.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-wincn-existing-ad-sqlazure.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 4: High-availability cluster for Windows workloads with existing Active Directory Domain (No public IP)
@@ -41,7 +71,7 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 This template deploys an HPC Pack cluster with high availability for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes **three** head nodes, one Database Server with SQL Server 2016 Standard version, and a configurable number of **Windows** compute nodes. No public IP address is created for the head nodes. Use this template if you have a virtual network with Express Route configured and you want to join the cluster to your on-premises Active Directory Domain.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-wincn-existing-ad-no-public-ip.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 5: Single head node cluster for Windows workloads with new Active Directory Domain
@@ -49,7 +79,7 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 This template deploys an HPC Pack cluster with one **single** head node for Windows HPC workloads in Active Directory Domain forest. The cluster includes one domain controller, one **single** head node with local databases (SQL server 2016 Express version), and a configurable number of **Windows** compute nodes.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fsingle-hn-wincn-ad.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 6: Single head node cluster for Windows workloads with existing Active Directory Domain
@@ -57,7 +87,7 @@ This template deploys an HPC Pack cluster with one **single** head node for Wind
 This template deploys an HPC Pack cluster with one **single** head node for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes one **single** head node with local databases (SQL server 2016 Express version), and a configurable number of **Windows** compute nodes.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fsingle-hn-wincn-existing-ad.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 7: Single head node cluster for Windows workloads with existing Active Directory Domain (No public IP)
@@ -65,7 +95,7 @@ This template deploys an HPC Pack cluster with one **single** head node for Wind
 This template deploys an HPC Pack cluster with one **single** head node for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes one **single** head node with local databases (SQL server 2016 Express version), and a configurable number of **Windows** compute nodes. No public IP address is created for the head nodes. Use this template if you have a virtual network with Express Route configured and you want to join the cluster to your on-premises Active Directory Domain.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fsingle-hn-wincn-existing-ad-no-public-ip.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 8: Single head node cluster for Linux workloads with existing Active Directory Domain (No public IP)
@@ -73,7 +103,7 @@ This template deploys an HPC Pack cluster with one **single** head node for Wind
 This template deploys an HPC Pack cluster with one **single** head node for Windows HPC workloads in an existing Active Directory Domain forest. The cluster includes one **single** head node with local databases (SQL server 2016 Express version), and a configurable number of **Linux** compute nodes. No public IP address is created for the head nodes. Use this template if you have a virtual network with Express Route configured and you want to join the cluster to your on-premises Active Directory Domain.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fsingle-hn-lnxcn-existing-ad-no-public-ip.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ---
@@ -84,7 +114,7 @@ This template deploys an HPC Pack cluster with one **single** head node for Wind
 This template deploys an HPC Pack cluster with high availability for Windows HPC workloads. The cluster includes **three** head nodes, one Database Server with SQL Server 2016 Standard version, and a configurable number of **Windows** compute nodes.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-wincn-noad.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 2: High-availability cluster for Linux workloads
@@ -92,7 +122,7 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 This template deploys an HPC Pack cluster with high availability for Windows HPC workloads. The cluster includes **three** head nodes, one Database Server with SQL Server 2016 Standard version, and a configurable number of **Linux** compute nodes.
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fthree-hns-lnxcn.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 3: Single head node cluster for Windows workloads
@@ -100,7 +130,7 @@ This template deploys an HPC Pack cluster with high availability for Windows HPC
 This template deploys an HPC Pack cluster with one **single** head node and a configurable number of **Windows** compute nodes. The head node is with local databases (SQL server 2016 Express version).
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fsingle-hn-wincn-noad.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ### Template 4: Single head node cluster for Linux workloads
@@ -108,7 +138,7 @@ This template deploys an HPC Pack cluster with one **single** head node and a co
 This template deploys an HPC Pack cluster with one **single** head node and a configurable number of **Linux** compute nodes. The head node is with local databases (SQL server 2016 Express version).
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMsHpcPack%2FHPCPack2016%2Fmaster%2Fnewcluster-templates%2Fsingle-hn-lnxcn.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
+​    <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 ---
